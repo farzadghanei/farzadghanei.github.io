@@ -148,8 +148,8 @@ or a mix of both.</p>
         <span class="p">);</span>
         <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">setPrimaryKey</span><span class="p">([</span><span class="s1">&#39;id&#39;</span><span class="p">]);</span>
         <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">64</span><span class="p">]);</span>
-        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;country&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">2</span><span class="p">]);</span>
-        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addUniqueIndex</span><span class="p">([</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;country&#39;</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;region&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">2</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addUniqueIndex</span><span class="p">([</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">]);</span>
     <span class="p">}</span>
 
     <span class="k">public</span> <span class="k">function</span> <span class="nf">down</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
@@ -182,8 +182,58 @@ methods are called.</p>
 <p>This means that all the calls to <tt class="docutils literal">addSql</tt> will be in the SQL commands queue
 before the ones that change the schema. So those SQL commands can not rely on the
 new schema, since they will execute while the database is still in previous version.</p>
-<p>The solution that comes to mind is not to use the <tt class="docutils literal">Schema</tt> instance at all
+<p>One solution is not using the <tt class="docutils literal">Schema</tt> instance at all
 and just use <tt class="docutils literal">addSql</tt> first to change the schema, and then to migrate the data.</p>
+<p>Another solution is to use the <tt class="docutils literal">connection</tt> property of the <tt class="docutils literal">Version</tt> class in
+<tt class="docutils literal">postUp</tt>/<tt class="docutils literal">postDown</tt> methods.
+Each migration version class is provided by an instance of <tt class="docutils literal">Doctrine\DBAL\Connection</tt>
+which can be used to execute any query directly.</p>
+<div class="highlight"><pre><span class="cp">&lt;?php</span> <span class="c1">// file: Version20151015114023_CreateGatewayTable.php</span>
+
+<span class="k">namespace</span> <span class="nx">DoctrineMigrations</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Migrations\AbstractMigration</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Schema\Schema</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Types\Type</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">Version20151015114023_CreateGatewayTable</span> <span class="k">extends</span> <span class="nx">AbstractMigration</span>
+<span class="p">{</span>
+    <span class="k">const</span> <span class="no">TABLE_NAME</span> <span class="o">=</span> <span class="s1">&#39;gateway&#39;</span><span class="p">;</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">up</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$table</span> <span class="o">=</span> <span class="nv">$schema</span><span class="o">-&gt;</span><span class="na">createTable</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">TABLE_NAME</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addOption</span><span class="p">(</span><span class="s2">&quot;charset&quot;</span><span class="p">,</span> <span class="s2">&quot;utf8&quot;</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addOption</span><span class="p">(</span><span class="s2">&quot;collate&quot;</span><span class="p">,</span> <span class="s2">&quot;utf8_bin&quot;</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span>
+            <span class="s1">&#39;id&#39;</span><span class="p">,</span>
+            <span class="nx">Type</span><span class="o">::</span><span class="na">INTEGER</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;unsigned&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span><span class="p">,</span>
+                <span class="s1">&#39;notnull&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span><span class="p">,</span>
+                <span class="s1">&#39;autoincrement&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span>
+            <span class="p">]</span>
+        <span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">setPrimaryKey</span><span class="p">([</span><span class="s1">&#39;id&#39;</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">64</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;region&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">2</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addUniqueIndex</span><span class="p">([</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">]);</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">down</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$schema</span><span class="o">-&gt;</span><span class="na">dropTable</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">TABLE_NAME</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">postUp</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">connection</span><span class="o">-&gt;</span><span class="na">insert</span><span class="p">(</span>
+            <span class="nx">self</span><span class="o">::</span><span class="na">TABLE_NAME</span><span class="p">,</span>
+            <span class="p">[</span><span class="s1">&#39;name&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;first&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;MY&#39;</span><span class="p">]</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 
             </div>
             <!-- /.entry-content -->
