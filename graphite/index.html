@@ -126,11 +126,11 @@ This path is called <em>GRAPHITE_ROOT</em>, and most other paths are configured 
 This path (like other important paths) could be specified using an environment variable.
 For more information about the project and different installation instructions please refer to graphite documentations.
 We install Carbon and Graphite using pip, Python package management tool.</p>
-<div class="highlight"><pre>sudo pip install django django-tagging
+<div class="highlight"><pre><span></span>sudo pip install django django-tagging
 sudo pip install whisper carbon graphite-web
 </pre></div>
 <p>It's recommended to run the service as a separate user:</p>
-<div class="highlight"><pre>sudo useradd -d /opt/graphite -s /bin/false graphite
+<div class="highlight"><pre><span></span>sudo useradd -d /opt/graphite -s /bin/false graphite
 </pre></div>
 <p>Carbon should be configured using a few config files in <em>$GRAPHITE_CONF_DIR</em> path, which is by default <em>conf</em> directory in <em>$GRAPHITE_ROOT</em> (<em>/opt/graphite/conf</em>).
 After the installation examples for all config files are available to be used as a base for desired configurations. These config files are required for Carbon to start:</p>
@@ -143,7 +143,7 @@ After the installation examples for all config files are available to be used as
 <p>If you need to keep more fine grained data points for a group of metrics, you could define a different storage schema for them.
 For example we would like to have more data points for our database metrics (whose name start with db.), by keeping 5 second data points for 1 day,
 aggregated 10 seconds for a week, and 30 second aggregates for a month. Modify <em>storage-schemas.conf</em> file like this:</p>
-<div class="highlight"><pre><span class="k">[carbon]</span>
+<div class="highlight"><pre><span></span><span class="k">[carbon]</span>
 <span class="na">pattern</span> <span class="o">=</span> <span class="s">^carbon\.</span>
 <span class="na">retentions</span> <span class="o">=</span> <span class="s">60:90d</span>
 
@@ -159,7 +159,7 @@ aggregated 10 seconds for a week, and 30 second aggregates for a month. Modify <
 Both Carbon and Graphite store log files which are by default stored in log <em>directory</em> under this storage path.
 So It is require that graphite user has write permission to the storage path.</p>
 <p>Start the carbon-cache service:</p>
-<div class="highlight"><pre>sudo chown -R graphite:graphite /opt/graphite/storage
+<div class="highlight"><pre><span></span>sudo chown -R graphite:graphite /opt/graphite/storage
 sudo /opt/graphite/bin/carbon-cache start
 </pre></div>
 <p>When whisper library is installed, it comes with a set of simple command line tools to display data in whisper files.
@@ -170,36 +170,36 @@ This file is a Python source file that defines variables to configure Graphite. 
 or custom path to where whisper files are stored. Default values are all configured so they match the default installation of Carbon.
 The one required part is the database access information in the file. For simplicity we are going to use a sqlite DB file so uncomment these lines
 (if these lines are not in you config file, append these lines):</p>
-<div class="highlight"><pre><span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s">&#39;NAME&#39;</span><span class="p">:</span> <span class="s">&#39;/opt/graphite/storage/graphite.db&#39;</span><span class="p">,</span>
-        <span class="s">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s">&#39;django.db.backends.sqlite3&#39;</span><span class="p">,</span>
-        <span class="s">&#39;USER&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span><span class="p">,</span>
-        <span class="s">&#39;PASSWORD&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span><span class="p">,</span>
-        <span class="s">&#39;HOST&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span><span class="p">,</span>
-        <span class="s">&#39;PORT&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span>
+<div class="highlight"><pre><span></span><span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;NAME&#39;</span><span class="p">:</span> <span class="s1">&#39;/opt/graphite/storage/graphite.db&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s1">&#39;django.db.backends.sqlite3&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;USER&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PASSWORD&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;HOST&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PORT&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 <p>We should create the sqlite file first by using the Django <em>manage.py</em> script:</p>
-<div class="highlight"><pre>sudo python /opt/graphite/webapp/graphite/manage.py syncdb
+<div class="highlight"><pre><span></span>sudo python /opt/graphite/webapp/graphite/manage.py syncdb
 </pre></div>
 <p>Now the sqlite file is created and ready to be used. Set proper permissions for it and check your Graphite installation by running its development web server:</p>
-<div class="highlight"><pre>sudo chown graphite:graphite /opt/graphite/storage/graphite.db
+<div class="highlight"><pre><span></span>sudo chown graphite:graphite /opt/graphite/storage/graphite.db
 sudo -u graphite -- /opt/graphite/bin/run-graphite-devel-server.py --port<span class="o">=</span><span class="m">8080</span> /opt/graphite
 </pre></div>
 <p>Note that this web server is not suitable for production and is only used for development/testing purposes.
 Graphite (like other Django based web apps) could be served using any WSGI server and a proper WSGI server should be used for production.
 we are going to use <a class="reference external" href="http://gunicorn.org/">gunicorn</a> in this guide.</p>
 <p>Graphite comes with a sample WSGI entry point file in <em>/opt/graphite/conf/graphite.wsgi.example</em>. Copy this file to <em>/opt/graphite/conf/graphite_wsgi.py</em> and then start gunicorn:</p>
-<div class="highlight"><pre>sudo pip install gunicorn
+<div class="highlight"><pre><span></span>sudo pip install gunicorn
 <span class="nb">cd</span> /opt/graphite/conf
 sudo gunicorn -b <span class="s1">&#39;0.0.0.0:8080&#39;</span> -u graphite -g graphite -w <span class="m">2</span> graphite_wsgi:application
 </pre></div>
 <p>If after installing Graphite, it failed to generate graphs, make sure <a class="reference external" href="https://pypi.python.org/pypi/pycairo">pycairo</a> is installed on your system.
 Installing pycairo from a prebuilt binary package (like from the OS package management) is easier since installing it using pip requires building
 the library from source, So you would need a C compiler, Python headers, Cairo and Cairo development files.</p>
-<div class="highlight"><pre>sudo apt-get install python-cairo
+<div class="highlight"><pre><span></span>sudo apt-get install python-cairo
 </pre></div>
 <p>And now graphite can render graph images.</p>
 
@@ -236,7 +236,7 @@ the library from source, So you would need a C compiler, Python headers, Cairo a
    <div class="container">
       <hr>
       <div class="row">
-         <div class="col-xs-10">&copy; 2015 Farzad Ghanei
+         <div class="col-xs-10">&copy; 2016 Farzad Ghanei
             &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
             <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
             <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>

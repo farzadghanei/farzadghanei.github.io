@@ -118,24 +118,24 @@ At work we use Perl extensively and we were more comfortable to use a Perl based
 <h2>Bucky</h2>
 <p>Bucky could be used to collect data through different protocols, for this guide we would disable others and use only statsd.</p>
 <p>Install bucky using pip Python package manager:</p>
-<div class="highlight"><pre>sudo pip install bucky
+<div class="highlight"><pre><span></span>sudo pip install bucky
 </pre></div>
 <p>It could be started by specifying command line options, or read its configurations from a file.
 By default if bucky could not connect to Carbon (data collection service from Graphite) it will retry for maximum of times and then quits.
 We'll make sure that bucky will keep trying every 5 seconds without a limit. Write these configs in <em>bucky.conf</em> file:</p>
-<div class="highlight"><pre><span class="n">debug</span> <span class="o">=</span> <span class="bp">False</span>
+<div class="highlight"><pre><span></span><span class="n">debug</span> <span class="o">=</span> <span class="bp">False</span>
 <span class="n">full_trace</span> <span class="o">=</span> <span class="bp">False</span>
-<span class="n">log_level</span> <span class="o">=</span> <span class="s">&quot;INFO&quot;</span>
+<span class="n">log_level</span> <span class="o">=</span> <span class="s2">&quot;INFO&quot;</span>
 
 <span class="n">metricsd_enabled</span> <span class="o">=</span> <span class="bp">False</span>
 <span class="n">collectd_enabled</span> <span class="o">=</span> <span class="bp">False</span>
 
-<span class="n">statsd_ip</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+<span class="n">statsd_ip</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 <span class="n">statsd_port</span> <span class="o">=</span> <span class="mi">8125</span>
 <span class="n">statsd_enabled</span> <span class="o">=</span> <span class="bp">True</span>
 <span class="n">statsd_flush_time</span> <span class="o">=</span> <span class="mf">1.0</span>
 
-<span class="n">graphite_ip</span> <span class="o">=</span> <span class="s">&quot;127.0.0.1&quot;</span>
+<span class="n">graphite_ip</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
 <span class="n">graphite_port</span> <span class="o">=</span> <span class="mi">2003</span>
 <span class="n">graphite_max_reconnects</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="n">graphite_reconnect_delay</span> <span class="o">=</span> <span class="mi">5</span>
@@ -143,7 +143,7 @@ We'll make sure that bucky will keep trying every 5 seconds without a limit. Wri
 <span class="n">graphite_pickle_buffer_size</span> <span class="o">=</span> <span class="mi">500</span>
 </pre></div>
 <p>Now start bucky:</p>
-<div class="highlight"><pre>bucky bucky.conf &gt; bucky.log 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">&amp;</span>
+<div class="highlight"><pre><span></span>bucky bucky.conf &gt; bucky.log 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">&amp;</span>
 </pre></div>
 <p>Of course this is a quick start, you may want to start it as a system daemon on production.
 Bucky <a class="reference external" href="https://github.com/cloudant/bucky/">source</a> distribution comes with scripts for systemd and runit.
@@ -161,27 +161,27 @@ Most client libraries provide a separate method for each type, so all you need t
 </blockquote>
 <p>Any programming language with a statsd client library could be used to send data.
 Here we use a sample code in Python using <a class="reference external" href="https://pypi.python.org/pypi/statsd">statsd</a> module.</p>
-<div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
 
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">random</span>
 <span class="kn">import</span> <span class="nn">statsd</span>
 
-<span class="n">sc</span> <span class="o">=</span> <span class="n">statsd</span><span class="o">.</span><span class="n">StatsClient</span><span class="p">(</span><span class="s">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">8125</span><span class="p">)</span>
-<span class="c"># on user login action</span>
+<span class="n">sc</span> <span class="o">=</span> <span class="n">statsd</span><span class="o">.</span><span class="n">StatsClient</span><span class="p">(</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">8125</span><span class="p">)</span>
+<span class="c1"># on user login action</span>
 <span class="n">sess_time_start_mics</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s">&#39;user.login&#39;</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s1">&#39;user.login&#39;</span><span class="p">)</span>
 
-<span class="c"># profile any operation, like a db transaction</span>
+<span class="c1"># profile any operation, like a db transaction</span>
 <span class="n">db_time_start_mics</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span>
-<span class="c"># sleep to fake a db transaction</span>
+<span class="c1"># sleep to fake a db transaction</span>
 <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="mi">5</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s">&#39;db.get_user_data&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">-</span> <span class="n">db_time_start_mics</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s1">&#39;db.get_user_data&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">-</span> <span class="n">db_time_start_mics</span><span class="p">)</span>
 
-<span class="c"># ... later on user logout action</span>
+<span class="c1"># ... later on user logout action</span>
 <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="mi">5</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s">&#39;user.session&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">-</span> <span class="n">sess_time_start_mics</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s">&#39;user.logout&#39;</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s1">&#39;user.session&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">-</span> <span class="n">sess_time_start_mics</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s1">&#39;user.logout&#39;</span><span class="p">)</span>
 </pre></div>
 <p>Data is sent from application to bucky, then flushed to Carbon and stored in whisper files.
 Check Carbon storage path to find new files and directories in <em>/opt/graphite/storage/whisper</em>.
@@ -221,7 +221,7 @@ If you have setup <a class="reference external" href="/graphite/">Graphite</a> y
    <div class="container">
       <hr>
       <div class="row">
-         <div class="col-xs-10">&copy; 2015 Farzad Ghanei
+         <div class="col-xs-10">&copy; 2016 Farzad Ghanei
             &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
             <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
             <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>

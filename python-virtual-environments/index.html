@@ -117,32 +117,32 @@ when Python runs, modify <cite>sys.path</cite> to include this path to search fo
 <p>Install <cite>virtualenv</cite> and make a path and create a virtual environment in there.
 Then using shell helper files (provided by <cite>virtualenv</cite>), the shell path is modified so when Python is called,
 it's the one configured to search the virtual environment specific path for modules.</p>
-<div class="highlight"><pre><span class="nv">$ </span>sudo pip install virtualenv
-<span class="nv">$ </span>mkdir ~/.virtualenv/myapp
-<span class="nv">$ </span>virtualenv ~/.virtualenv/myapp
-<span class="nv">$ </span>ls -l ~/.virtualenv/myapp/bin/
+<div class="highlight"><pre><span></span>$ sudo pip install virtualenv
+$ mkdir ~/.virtualenv/myapp
+$ virtualenv ~/.virtualenv/myapp
+$ ls -l ~/.virtualenv/myapp/bin/
 </pre></div>
 <p>There will be files named <strong>activate</strong> for different shells (Bash, Csh, Fish). Bash is very common so:</p>
-<div class="highlight"><pre><span class="nv">$ </span><span class="nb">source</span> ~/.virtualenv/myapp/bin/activate
+<div class="highlight"><pre><span></span>$ <span class="nb">source</span> ~/.virtualenv/myapp/bin/activate
 </pre></div>
 <p>For example I use <a class="reference external" href="http://fishshell.com/">fish</a>, so:</p>
-<div class="highlight"><pre>~&gt; <span class="nb">source</span> ~/.virtualenv/myapp/bin/activate.fish
+<div class="highlight"><pre><span></span>~&gt; <span class="nb">source</span> ~/.virtualenv/myapp/bin/activate.fish
 </pre></div>
 <p>Now check <cite>sys.path</cite>:</p>
-<div class="highlight"><pre>~&gt; python -c <span class="s1">&#39;import sys; print sys.path&#39;</span>
+<div class="highlight"><pre><span></span>~&gt; python -c <span class="s1">&#39;import sys; print sys.path&#39;</span>
 </pre></div>
 <p>These samples used the default Python available (the Python version that executes when you type <cite>python</cite> in shell).
 However it's possible to chose a specific version of Python for the virtual environment (This version of Python should already be installed)
 For example for the same app, I'd like to setup a Python 3.4 virtual environment:</p>
-<div class="highlight"><pre>~&gt; mkdir ~/.virtualenv/myapp-py3.4
+<div class="highlight"><pre><span></span>~&gt; mkdir ~/.virtualenv/myapp-py3.4
 ~&gt; virtualenv --python<span class="o">=</span>python3.4 ~/.virtualenv/myapp-py3.4
 ~&gt; <span class="nb">source</span> ~/.virtualenv/myapp-py3.4/bin/activate.fish
 ~&gt; python -c <span class="s1">&#39;import sys; print(sys.path)&#39;</span>
 </pre></div>
 <p>By default <cite>virtualenv</cite> sets up <cite>pip</cite> as well, so when calling <cite>pip</cite>, it's the one from the virtual environment, and it will install all the packages
 in the virtual environment path.</p>
-<div class="highlight"><pre>~&gt; pip install -r requirements.txt
-<span class="c"># installs all packages under ~/.virtualenv/myapp-py3.4</span>
+<div class="highlight"><pre><span></span>~&gt; pip install -r requirements.txt
+<span class="c1"># installs all packages under ~/.virtualenv/myapp-py3.4</span>
 </pre></div>
 </div>
 <div class="section" id="venv">
@@ -150,7 +150,7 @@ in the virtual environment path.</p>
 <p>Virtual environments are so useful that starting from Python 3.3 standard library provides
 a <a class="reference external" href="https://docs.python.org/3.3/library/venv.html">tool</a> to work with them.</p>
 <p>Using <cite>venv</cite> is about the same as <cite>virtualenv</cite>, only instead of using <cite>virtualenv</cite> standalone command, the <cite>venv</cite> module should be used as a script:</p>
-<div class="highlight"><pre>~&gt; python3.4 -m venv ~/.venv/myapp-py3.4
+<div class="highlight"><pre><span></span>~&gt; python3.4 -m venv ~/.venv/myapp-py3.4
 ~&gt; <span class="nb">source</span> ~/.venv/myapp-py3.4/bin/activate.fish
 ~&gt; python -c <span class="s1">&#39;import sys; print(sys.path)&#39;</span>
 </pre></div>
@@ -200,7 +200,7 @@ using their own versions of libraries.</p>
    <div class="container">
       <hr>
       <div class="row">
-         <div class="col-xs-10">&copy; 2015 Farzad Ghanei
+         <div class="col-xs-10">&copy; 2016 Farzad Ghanei
             &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
             <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
             <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>

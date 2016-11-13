@@ -105,57 +105,57 @@ Farzad Ghanei            </a>
                 <p>We needed a network analysis tool and decided to use <a class="reference external" href="http://www.ntop.org/products/ntop/">ntop</a>. Official ntop website provides binary packages for Ubuntu and CentOS.</p>
 <p>Ubuntu has an official package for ntop but the package is version 3 and we preferred to use the latest version, so package repositories were no good for us.</p>
 <p>We set up a CentOS 6 server and installed ntop rpm package. But the package did not include an init script. Here is an init script to start/stop ntop in CentOS 6:</p>
-<div class="highlight"><pre><span class="c">#!/bin/bash</span>
-<span class="c">#</span>
-<span class="c"># ntop          Start up the ntop as a daemon</span>
-<span class="c">#</span>
-<span class="c"># chkconfig: 2345 55 25</span>
-<span class="c"># description: ntop is a network traffic probe that shows the network usage</span>
-<span class="c">#              This service starts up the ntop as a daemon.</span>
-<span class="c">#</span>
-<span class="c"># processname: ntop</span>
-<span class="c"># config: /etc/ntop.conf</span>
-<span class="c"># pidfile: /usr/local/var/ntop/ntop.pid</span>
+<div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
+<span class="c1">#</span>
+<span class="c1"># ntop          Start up the ntop as a daemon</span>
+<span class="c1">#</span>
+<span class="c1"># chkconfig: 2345 55 25</span>
+<span class="c1"># description: ntop is a network traffic probe that shows the network usage</span>
+<span class="c1">#              This service starts up the ntop as a daemon.</span>
+<span class="c1">#</span>
+<span class="c1"># processname: ntop</span>
+<span class="c1"># config: /etc/ntop.conf</span>
+<span class="c1"># pidfile: /usr/local/var/ntop/ntop.pid</span>
 
-<span class="c">### BEGIN INIT INFO</span>
-<span class="c"># Provides: ntop</span>
-<span class="c"># Required-Start: $local_fs $network $syslog</span>
-<span class="c"># Required-Stop: $local_fs $syslog</span>
-<span class="c"># Should-Start: $syslog</span>
-<span class="c"># Should-Stop: $network $syslog</span>
-<span class="c"># Default-Start: 2 3 4 5</span>
-<span class="c"># Default-Stop: 0 1 6</span>
-<span class="c"># Short-Description: Start up the ntop as a daemon</span>
-<span class="c"># Description: ntop is a network traffic probe that shows the network usage</span>
-<span class="c">#                    This service starts up the ntop as a daemon.</span>
-<span class="c">### END INIT INFO</span>
+<span class="c1">### BEGIN INIT INFO</span>
+<span class="c1"># Provides: ntop</span>
+<span class="c1"># Required-Start: $local_fs $network $syslog</span>
+<span class="c1"># Required-Stop: $local_fs $syslog</span>
+<span class="c1"># Should-Start: $syslog</span>
+<span class="c1"># Should-Stop: $network $syslog</span>
+<span class="c1"># Default-Start: 2 3 4 5</span>
+<span class="c1"># Default-Stop: 0 1 6</span>
+<span class="c1"># Short-Description: Start up the ntop as a daemon</span>
+<span class="c1"># Description: ntop is a network traffic probe that shows the network usage</span>
+<span class="c1">#                    This service starts up the ntop as a daemon.</span>
+<span class="c1">### END INIT INFO</span>
 
-<span class="c"># source function library</span>
+<span class="c1"># source function library</span>
 . /etc/rc.d/init.d/functions
 
-<span class="nv">runlevel</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> -- <span class="k">$(</span>runlevel<span class="k">)</span><span class="p">;</span> <span class="nb">eval</span> <span class="s2">&quot;echo \$</span><span class="nv">$#&quot;</span><span class="s2"> )</span>
+<span class="nv">runlevel</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> -- <span class="k">$(</span>runlevel<span class="k">)</span><span class="p">;</span> <span class="nb">eval</span> <span class="s2">&quot;echo \$</span><span class="nv">$#</span><span class="s2">&quot;</span> <span class="k">)</span>
 
-<span class="s2">RETVAL=0</span>
-<span class="s2">prog=&quot;</span>ntop<span class="s2">&quot;</span>
+<span class="nv">RETVAL</span><span class="o">=</span>0
+<span class="nv">prog</span><span class="o">=</span><span class="s2">&quot;ntop&quot;</span>
 
-<span class="s2">NTOPD=&quot;</span>/usr/local/bin/ntop<span class="s2">&quot;</span>
-<span class="s2">NTOP_CONF_FILE=&quot;</span>/etc/ntop.conf<span class="s2">&quot;</span>
-<span class="s2">PID_FILE=&quot;</span>/usr/local/var/ntop/ntop.pid<span class="s2">&quot;</span>
+<span class="nv">NTOPD</span><span class="o">=</span><span class="s2">&quot;/usr/local/bin/ntop&quot;</span>
+<span class="nv">NTOP_CONF_FILE</span><span class="o">=</span><span class="s2">&quot;/etc/ntop.conf&quot;</span>
+<span class="nv">PID_FILE</span><span class="o">=</span><span class="s2">&quot;/usr/local/var/ntop/ntop.pid&quot;</span>
 
-<span class="s2">if [ -f </span><span class="nv">$NTOP_CONF_FILE</span><span class="s2"> ]</span>
-<span class="s2">then</span>
-<span class="s2">    OPTIONS=&quot;</span>@<span class="nv">$NTOP_CONF_FILE</span> --daemon<span class="s2">&quot;</span>
-<span class="s2">else</span>
-<span class="s2">    OPTIONS=&quot;</span>--daemon<span class="s2">&quot;</span>
-<span class="s2">fi</span>
+<span class="k">if</span> <span class="o">[</span> -f <span class="nv">$NTOP_CONF_FILE</span> <span class="o">]</span>
+<span class="k">then</span>
+    <span class="nv">OPTIONS</span><span class="o">=</span><span class="s2">&quot;@</span><span class="nv">$NTOP_CONF_FILE</span><span class="s2"> --daemon&quot;</span>
+<span class="k">else</span>
+    <span class="nv">OPTIONS</span><span class="o">=</span><span class="s2">&quot;--daemon&quot;</span>
+<span class="k">fi</span>
 
-<span class="s2">start()</span>
-<span class="s2">{</span>
-<span class="s2">        if [ ! -x </span><span class="nv">$NTOPD</span><span class="s2"> ]; then</span>
-<span class="s2">        echo &quot;</span>Failed to find <span class="nv">$prog</span> exeuctable on <span class="nv">$NTOPD</span>!<span class="s2">&quot;</span>
-<span class="s2">        exit 5</span>
-<span class="s2">    fi</span>
-<span class="s2">        echo -n </span><span class="nv">$&quot;</span><span class="s2">Starting </span><span class="nv">$prog</span><span class="s2">: &quot;</span>
+start<span class="o">()</span>
+<span class="o">{</span>
+        <span class="k">if</span> <span class="o">[</span> ! -x <span class="nv">$NTOPD</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">echo</span> <span class="s2">&quot;Failed to find </span><span class="nv">$prog</span><span class="s2"> exeuctable on </span><span class="nv">$NTOPD</span><span class="s2">!&quot;</span>
+        <span class="nb">exit</span> 5
+    <span class="k">fi</span>
+        <span class="nb">echo</span> -n $<span class="s2">&quot;Starting </span><span class="nv">$prog</span><span class="s2">: &quot;</span>
         <span class="nv">$NTOPD</span> <span class="nv">$OPTIONS</span> <span class="p">&amp;</span>amp<span class="p">;&amp;</span>amp<span class="p">;</span> success <span class="o">||</span> failure
     <span class="nv">RETVAL</span><span class="o">=</span><span class="nv">$?</span>
     <span class="nv">PID</span><span class="o">=</span><span class="sb">`</span>pidof <span class="nv">$prog</span><span class="sb">`</span>
@@ -163,21 +163,21 @@ Farzad Ghanei            </a>
         <span class="k">return</span> <span class="nv">$RETVAL</span>
 <span class="o">}</span>
 
-stop<span class="o">(</span><span class="k">)</span>
+stop<span class="o">()</span>
 <span class="o">{</span>
-        <span class="nb">echo</span> -n <span class="nv">$&quot;</span>Stopping <span class="nv">$prog</span>: <span class="s2">&quot;</span>
-<span class="s2">        if [ -f </span><span class="nv">$PID_FILE</span><span class="s2"> ]; then</span>
-<span class="s2">        killproc -p </span><span class="nv">$PID_FILE</span><span class="s2"> </span><span class="nv">$NTOPD</span><span class="s2"></span>
-<span class="s2">        else</span>
-<span class="s2">        failure </span><span class="nv">$&quot;</span><span class="s2">Stopping </span><span class="nv">$prog</span><span class="s2">&quot;</span>
+        <span class="nb">echo</span> -n $<span class="s2">&quot;Stopping </span><span class="nv">$prog</span><span class="s2">: &quot;</span>
+        <span class="k">if</span> <span class="o">[</span> -f <span class="nv">$PID_FILE</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+        killproc -p <span class="nv">$PID_FILE</span> <span class="nv">$NTOPD</span>
+        <span class="k">else</span>
+        failure $<span class="s2">&quot;Stopping </span><span class="nv">$prog</span><span class="s2">&quot;</span>
         <span class="k">fi</span>
         <span class="nv">RETVAL</span><span class="o">=</span><span class="nv">$?</span>
-        <span class="c"># if we are in halt or reboot runlevel kill all running sessions</span>
-        <span class="c"># so the TCP connections are closed cleanly</span>
+        <span class="c1"># if we are in halt or reboot runlevel kill all running sessions</span>
+        <span class="c1"># so the TCP connections are closed cleanly</span>
         <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;x</span><span class="nv">$runlevel</span><span class="s2">&quot;</span> <span class="o">=</span> x0 -o <span class="s2">&quot;x</span><span class="nv">$runlevel</span><span class="s2">&quot;</span> <span class="o">=</span> x6 <span class="o">]</span> <span class="p">;</span> <span class="k">then</span>
             <span class="nb">trap</span> <span class="s1">&#39;&#39;</span> TERM
             killall <span class="nv">$prog</span> 2<span class="p">&amp;</span>gt<span class="p">;</span>/dev/null
-            <span class="nb">trap </span>TERM
+            <span class="nb">trap</span> TERM
         <span class="k">fi</span>
         <span class="nb">echo</span>
 <span class="o">}</span>
@@ -197,12 +197,12 @@ rh_status_q<span class="o">()</span> <span class="o">{</span>
 
 <span class="k">case</span> <span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span> in
         start<span class="o">)</span>
-                rh_status <span class="p">&amp;</span>amp<span class="p">;&amp;</span>amp<span class="p">;</span> <span class="nb">exit </span>0
+                rh_status <span class="p">&amp;</span>amp<span class="p">;&amp;</span>amp<span class="p">;</span> <span class="nb">exit</span> 0
                 start
                 <span class="p">;;</span>
         stop<span class="o">)</span>
                 <span class="k">if</span> ! rh_status_q<span class="p">;</span> <span class="k">then</span>
-                        <span class="nb">exit </span>0
+                        <span class="nb">exit</span> 0
                 <span class="k">fi</span>
                 stop
                 <span class="p">;;</span>
@@ -214,17 +214,17 @@ rh_status_q<span class="o">()</span> <span class="o">{</span>
                 <span class="nv">RETVAL</span><span class="o">=</span><span class="nv">$?</span>
                 <span class="p">;;</span>
         *<span class="o">)</span>
-                <span class="nb">echo</span> <span class="nv">$&quot;</span>Usage: <span class="nv">$0</span> <span class="o">{</span>start<span class="p">|</span>stop<span class="p">|</span>restart<span class="p">|</span>status<span class="o">}</span><span class="s2">&quot;</span>
-<span class="s2">                RETVAL=2</span>
-<span class="s2">        ;;</span>
-<span class="s2">esac</span>
-<span class="s2">exit </span><span class="nv">$RETVAL</span><span class="s2"></span>
+                <span class="nb">echo</span> $<span class="s2">&quot;Usage: </span><span class="nv">$0</span><span class="s2"> {start|stop|restart|status}&quot;</span>
+                <span class="nv">RETVAL</span><span class="o">=</span>2
+        <span class="p">;;</span>
+<span class="k">esac</span>
+<span class="nb">exit</span> <span class="nv">$RETVAL</span>
 </pre></div>
 <p>place the script in <em>/etc/init.d</em> and make sure it has execute permissions.</p>
-<div class="highlight"><pre>sudo chmod <span class="m">750</span> /etc/init.d/ntop
+<div class="highlight"><pre><span></span>sudo chmod <span class="m">750</span> /etc/init.d/ntop
 </pre></div>
 <p>You may use <em>chkconfig</em> to add the init script to autostart on certain run levels, The defaults for this script is on run level 2,3,4,5.</p>
-<div class="highlight"><pre>sudo chkconfig --add ntop
+<div class="highlight"><pre><span></span>sudo chkconfig --add ntop
 </pre></div>
 <p>The init script uses <em>/etc/ntop.conf</em> as the default configuration file.
 Run ntop executable with --help to see more information about command line options. You could use the same options in the configuration file.</p>
@@ -262,7 +262,7 @@ Run ntop executable with --help to see more information about command line optio
    <div class="container">
       <hr>
       <div class="row">
-         <div class="col-xs-10">&copy; 2015 Farzad Ghanei
+         <div class="col-xs-10">&copy; 2016 Farzad Ghanei
             &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
             <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
             <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
