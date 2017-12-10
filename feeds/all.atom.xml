@@ -1,0 +1,1021 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Farzad Ghanei</title><link href="/" rel="alternate"></link><link href="/feeds/all.atom.xml" rel="self"></link><id>/</id><updated>2017-12-09T17:47:30+00:00</updated><entry><title>Linux Home On Encrypted Partition</title><link href="/linux-home-on-encrypted-partition/" rel="alternate"></link><published>2017-12-09T17:47:30+00:00</published><updated>2017-12-09T17:47:30+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2017-12-09:/linux-home-on-encrypted-partition/</id><summary type="html">&lt;p&gt;Goal: Mount an encrypted partition on a secondary disk to &lt;cite&gt;/home&lt;/cite&gt;.&lt;/p&gt;
+&lt;p&gt;I needed more space for user files on my Linux desktop running on an SSD,
+so I wanted to use a second rotating disk to store user files.
+I also wanted to &lt;a class="reference external" href="https://wiki.archlinux.org/index.php/Disk_encryption#Why_use_encryption.3F"&gt;encrypt this disk&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="section" id="procedure"&gt;
+&lt;h2&gt;Procedure&lt;/h2&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;Create the encrypted …&lt;/li&gt;&lt;/ol&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;Goal: Mount an encrypted partition on a secondary disk to &lt;cite&gt;/home&lt;/cite&gt;.&lt;/p&gt;
+&lt;p&gt;I needed more space for user files on my Linux desktop running on an SSD,
+so I wanted to use a second rotating disk to store user files.
+I also wanted to &lt;a class="reference external" href="https://wiki.archlinux.org/index.php/Disk_encryption#Why_use_encryption.3F"&gt;encrypt this disk&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="section" id="procedure"&gt;
+&lt;h2&gt;Procedure&lt;/h2&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;Create the encrypted partition and filesystem on the new rotating disk&lt;/li&gt;
+&lt;li&gt;Configure the system to unlock the encrypted partition during boot&lt;/li&gt;
+&lt;li&gt;Mount the partition to &lt;cite&gt;/home&lt;/cite&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;We want to create an encrypted partitioin on the rotating disk.
+This command helps to make sure we're picking the right disk. The ROTA
+field specifies if the device is a rotating disk.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ lsblk -o NAME,UUID,TYPE,ROTA,FSTYPE,MOUNTPOINT
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's say &lt;cite&gt;sdb&lt;/cite&gt; is the SSD where the OS is installed, and &lt;cite&gt;sda&lt;/cite&gt; is the rotating
+disk that we want to use.&lt;/p&gt;
+&lt;div class="section" id="create-a-new-partition"&gt;
+&lt;h3&gt;Create a new partition&lt;/h3&gt;
+&lt;p&gt;Create a partition table and a partition.
+If there is already a partition available on the disk to use for this setup,
+we can skip this step.&lt;/p&gt;
+&lt;p&gt;I'm assuming it's a brand new disk, and we're going to create only one
+partition using &lt;cite&gt;fdisk&lt;/cite&gt;. Other partitioning schemes and tools may be used.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo fdisk /dev/sda  &lt;span class="c1"&gt;# sda is the new rotating disk&lt;/span&gt;
+  &lt;span class="c1"&gt;# on the fdisk interactive prompt:&lt;/span&gt;
+  &lt;span class="c1"&gt;#   press &amp;quot;o&amp;quot; to create a new partition table&lt;/span&gt;
+  &lt;span class="c1"&gt;#   press &amp;quot;n&amp;quot; and then &amp;quot;p&amp;quot; to create new primary partition&lt;/span&gt;
+  &lt;span class="c1"&gt;#   I&amp;#39;m using the whole disk for this partition so the default size is fine&lt;/span&gt;
+  &lt;span class="c1"&gt;#   press &amp;quot;w&amp;quot; to write changes to disk&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now &lt;cite&gt;/dev/sda1&lt;/cite&gt; is our target partition.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="setup-the-encrypted-device"&gt;
+&lt;h3&gt;Setup the encrypted device&lt;/h3&gt;
+&lt;p&gt;We're setting up &lt;a class="reference external" href="https://wiki.archlinux.org/index.php/Dm-crypt"&gt;dm-crypt&lt;/a&gt;
+encrypted partition in LUKS mode.
+First we need to make sure proper packages are installed and &lt;cite&gt;dm_crypt&lt;/cite&gt; kernel
+module is loaded.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo apt-get install cryptsetup
+$ lsmod &lt;span class="p"&gt;|&lt;/span&gt; grep dm_crypt
+$ &lt;span class="c1"&gt;# if dm_crypt was not loaded, load the module&lt;/span&gt;
+$ sudo modprobe dm_crypt
+&lt;/pre&gt;&lt;/div&gt;
+&lt;div class="section" id="create-encrypted-block-device"&gt;
+&lt;h4&gt;Create encrypted block device&lt;/h4&gt;
+&lt;p&gt;We'll use &lt;cite&gt;cryptsetup&lt;/cite&gt; tool to setup &lt;cite&gt;dm-crypt&lt;/cite&gt; managed mappings. I'm going
+to use default parameters, but
+&lt;a class="reference external" href="https://wiki.archlinux.org/index.php/Dm-crypt/Device_encryption#Encryption_options_for_LUKS_mode"&gt;other parameters&lt;/a&gt;
+may be used to customize the encryption setup (cipher, key size, etc.).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo cryptsetup -v luksFromat /dev/sda1
+$ &lt;span class="c1"&gt;# enter the encryption passphrase&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;div class="admonition note"&gt;
+&lt;p class="first admonition-title"&gt;Note&lt;/p&gt;
+&lt;p class="last"&gt;The encryption passphrase will be requried to access the data.
+If the passphrase is forgotten, it won't be possible to access the files on this partition,
+nor the metadata.&lt;/p&gt;
+&lt;/div&gt;
+&lt;p&gt;Now &lt;cite&gt;/dev/sda1&lt;/cite&gt; is an encrypted block device. Let's see the LUKS headers:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo cryptsetup luksDump /dev/sda1
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="create-the-filesystem"&gt;
+&lt;h4&gt;Create the filesystem&lt;/h4&gt;
+&lt;p&gt;The encrypted device should be unlocked to be accessed.
+Device mapper provides a new device which is mapped to the LUKS encrypted
+device. I'm going to name the mapped device &lt;cite&gt;sda1_crypt&lt;/cite&gt; but it can be any
+valid name.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo cryptsetup luksOpen /dev/sda1 sda1_crypt
+$ &lt;span class="c1"&gt;# or using a recent version of cryptesetup:&lt;/span&gt;
+  &lt;span class="c1"&gt;# sudo cryptsetup open --type luks /dev/sda1 sda1_crypt&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We'll be prompted for the encryption passphrase.
+A new block device is created in &lt;cite&gt;/dev/mapper&lt;/cite&gt; named &lt;cite&gt;sda1_crypt&lt;/cite&gt; with a new UUID.
+This is a block device and the rest of the operations (creating a filesystem, mounting)
+should use this device instead of directly working on &lt;cite&gt;/dev/sda1&lt;/cite&gt;.
+Later we'll mount this device to &lt;cite&gt;/home&lt;/cite&gt;.&lt;/p&gt;
+&lt;p&gt;No we can format the unlocked device with the desired filesystem.
+I'm using &lt;cite&gt;ext4&lt;/cite&gt; here, but any filesystem or formatting tool may be used.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo mkfs.ext4 /dev/mapper/sda1_crypt
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's see our block device setup by far on this disk&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ lsblk -o NAME,UUID,TYPE,FSTYPE,MOUNTPOINT /dev/sda
+NAME                     UUID                                   TYPE  FSTYPE      MOUNTPOINT
+sda                                                             disk
+└─sda1                   93d58349-5972-4f41-b384-a4b4c6e3ce2a   part  crypto_LUKS
+  └─sda1_crypt           3e52fa81-5aa4-4f7e-9008-013c60961d9a   crypt ext4
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This shows we have an encrypted partition &lt;cite&gt;sda1&lt;/cite&gt; (UUID &lt;cite&gt;93d58349...&lt;/cite&gt;), and
+and it's mapped to &lt;cite&gt;sda1_crypt&lt;/cite&gt; (UUID &lt;cite&gt;3e52fa81...&lt;/cite&gt;).&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="copy-existing-files"&gt;
+&lt;h3&gt;Copy existing files&lt;/h3&gt;
+&lt;p&gt;Our encrypted partition setup is ready to use. We can now mount this
+partition to move any existing files in &lt;cite&gt;/home&lt;/cite&gt; there if any. If there is
+no need to copy the files, we may skip this section.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo mkdir /mnt/encrypted_disk
+$ sudo mount -t ext4 /dev/mapper/sda1_crypt /mnt/encrypted_disk
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;I'm using &lt;cite&gt;cp -a&lt;/cite&gt; to copy the files since it's a local copy and &lt;cite&gt;cp&lt;/cite&gt; is simply
+available. Any other tool may be used.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo cp -axT /home/ /mnt/encrypted_disk/
+&lt;/pre&gt;&lt;/div&gt;
+&lt;div class="admonition note"&gt;
+&lt;p class="first admonition-title"&gt;Note&lt;/p&gt;
+&lt;p class="last"&gt;Make sure all the files are copied, specially hidden dot files.
+You may also want to remove existing files from /home
+since they are not stored encrypted.&lt;/p&gt;
+&lt;/div&gt;
+&lt;p&gt;When we're done copying files, we can unmount the partition and remove the
+temporary mount point.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo umount /mnt/encrypted_disk
+$ sudo rmdir /mnt/encrypted_disk
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="unlock-and-mount-on-boot"&gt;
+&lt;h3&gt;Unlock and mount on boot&lt;/h3&gt;
+&lt;p&gt;To configure the system to unlock the device during boot, we can use &lt;cite&gt;/etc/cryptab&lt;/cite&gt;.
+This file is like &lt;cite&gt;fstab&lt;/cite&gt; but is read before &lt;cite&gt;fstab&lt;/cite&gt; to unlock encrypted devices
+before they are mounted.&lt;/p&gt;
+&lt;p&gt;Add the encrypted partition device (&lt;cite&gt;sda1&lt;/cite&gt;) UUID, and the mapped device name to &lt;cite&gt;/etc/crypttab&lt;/cite&gt;.&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+# &amp;lt;target name&amp;gt; &amp;lt;source device&amp;gt;         &amp;lt;key file&amp;gt;      &amp;lt;options&amp;gt;
+# decrypt sda1 so it can be accessed from /dev/mapper/sda1_crypt
+sda1_crypt UUID=93d58349-5972-4f41-b384-a4b4c6e3ce2a none luks,timeout=180
+&lt;/pre&gt;
+&lt;p&gt;The commented line should be descriptive enough.
+The &lt;cite&gt;timeout&lt;/cite&gt; option causes the passphrase prompt to timeout after the specified number of seconds.&lt;/p&gt;
+&lt;p&gt;Add the unlocked LUKS device (&lt;cite&gt;sda1_crypt&lt;/cite&gt;) UUID, and the mount point to &lt;cite&gt;/etc/fstab&lt;/cite&gt;.&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+UUID=3e52fa81-5aa4-4f7e-9008-013c60961d9a /home           ext4    defaults               0       0
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</content><category term="linux"></category></entry><entry><title>Python Methods As Decorators</title><link href="/python-methods-as-decorators/" rel="alternate"></link><published>2016-11-13T12:29:49+00:00</published><updated>2016-11-13T12:29:49+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2016-11-13:/python-methods-as-decorators/</id><summary type="html">&lt;p&gt;Python function decorators (&lt;a class="reference external" href="https://www.python.org/dev/peps/pep-0318/"&gt;PEP 318&lt;/a&gt;)
+make it easy to modify behavior of functions (or add new functionality),
+without changing them. We won't introduce them here as they're &lt;a class="reference external" href="https://wiki.python.org/moin/PythonDecorators"&gt;documented&lt;/a&gt;
+extensively.&lt;/p&gt;
+&lt;p&gt;We're demonstrating a specific case, where we have a class and we want to
+to use one of the methods of …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Python function decorators (&lt;a class="reference external" href="https://www.python.org/dev/peps/pep-0318/"&gt;PEP 318&lt;/a&gt;)
+make it easy to modify behavior of functions (or add new functionality),
+without changing them. We won't introduce them here as they're &lt;a class="reference external" href="https://wiki.python.org/moin/PythonDecorators"&gt;documented&lt;/a&gt;
+extensively.&lt;/p&gt;
+&lt;p&gt;We're demonstrating a specific case, where we have a class and we want to
+to use one of the methods of that class, as a function decorator.
+For example the &lt;cite&gt;Timer&lt;/cite&gt; class provies the method &lt;cite&gt;time_callable()&lt;/cite&gt; method
+to measure and report how much time it takes to execute functions.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Timer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;object&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="fm"&gt;__init__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;reporter&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="o"&gt;...&lt;/span&gt;
+
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;time_callable&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="o"&gt;...&lt;/span&gt;
+
+&lt;span class="n"&gt;timer&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Timer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Reporter&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+&lt;span class="n"&gt;timer&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_callable&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="c1"&gt;# call my_func and report the duration&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Say we'd like to always measure and report a function like &lt;cite&gt;my_func&lt;/cite&gt; in a project.
+Using a function decorator seems like a good choice for this kind of functionality.
+If we decorate &lt;cite&gt;my_func&lt;/cite&gt; with the measuring function, there is no need to replace
+all the &lt;cite&gt;my_func&lt;/cite&gt; calls with &lt;cite&gt;time_callable(my_func)&lt;/cite&gt;.&lt;/p&gt;
+&lt;p&gt;So we're going to add a method &lt;cite&gt;wrap()&lt;/cite&gt; to the &lt;cite&gt;Timer&lt;/cite&gt; class, to decorate any
+function by measuring and reporting the duration. Plus we assume we'd like our
+decorator to accept specific parameters, for example a name to assiciate with the
+timed functions to appear in our reports. This is how the method is going to be called:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;timer&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Timer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Reporter&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+
+&lt;span class="nd"&gt;@timer.wrap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;my_func_duration&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;arg1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;arg2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt; &lt;span class="c1"&gt;# the function may need arguments&lt;/span&gt;
+    &lt;span class="o"&gt;...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We're going to implement &lt;cite&gt;Timer.wrap()&lt;/cite&gt;. But first let's start simple,
+by defining the decorator as just a function &lt;cite&gt;wrap()&lt;/cite&gt; (without extra parameters and no self reference).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;wrap&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="o"&gt;...&lt;/span&gt;
+
+&lt;span class="nd"&gt;@wrap&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;arg1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;arg2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="o"&gt;...&lt;/span&gt;
+
+&lt;span class="n"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;foo&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;bar&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;baz&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;When a function is decorated by another, Python runtime replaces references
+to the decorated function, with the return value of calling the decorator function,
+passing the decorated function as argument. In this example all the references to &lt;cite&gt;my_func&lt;/cite&gt;
+are replaced by &lt;cite&gt;wrap(my_func)&lt;/cite&gt;. Therefor:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;foo&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;bar&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;baz&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;is replaced by:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;wrap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;)(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;foo&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;bar&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;baz&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;So &lt;cite&gt;wrap&lt;/cite&gt; should accept &lt;cite&gt;my_func&lt;/cite&gt; (or any function), and return another function.
+The returned function should accept all the arguments of &lt;cite&gt;my_func&lt;/cite&gt; since the callers
+of &lt;cite&gt;my_func&lt;/cite&gt; are expecting to pass them.&lt;/p&gt;
+&lt;p&gt;Now we know what to implement for &lt;cite&gt;wrap&lt;/cite&gt; (we're also using &lt;a class="reference external" href="https://docs.python.org/library/functools.html"&gt;functools.wraps&lt;/a&gt;
+to update the metadata of our decorator function to look like the decorated one).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;time&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;functools&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;wrap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="nd"&gt;@functools.wraps&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;decorator&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;**&lt;/span&gt;&lt;span class="n"&gt;kwargs&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;start_timestamp&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;**&lt;/span&gt;&lt;span class="n"&gt;kwargs&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;start_timestamp&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;decorator&lt;/span&gt;
+
+&lt;span class="nd"&gt;@wrap&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;arg1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;arg2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="o"&gt;...&lt;/span&gt;
+
+&lt;span class="n"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;foo&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;bar&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;baz&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We're printing the duration of the call here, otherwise there would be no difference
+between the decorated &lt;cite&gt;my_func&lt;/cite&gt; and none-decorated.&lt;/p&gt;
+&lt;p&gt;Back to our main intention. Let's compare how we're using &lt;cite&gt;wrap&lt;/cite&gt; now, with what we want &lt;cite&gt;Timer.wrap&lt;/cite&gt; to be:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nd"&gt;@wrap&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;arg1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;arg2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="o"&gt;...&lt;/span&gt;
+
+&lt;span class="nd"&gt;@timer.wrap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;my_func_duration&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;arg1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;arg2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="o"&gt;...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This shows that the &lt;cite&gt;Timer.wrap&lt;/cite&gt; should be a method accepting a parameter for the
+report name (and of course &lt;cite&gt;self&lt;/cite&gt;), and it should return a function that will behave like &lt;cite&gt;wrap&lt;/cite&gt;.
+From the runtime perspective, the calls to &lt;cite&gt;my_func&lt;/cite&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;foo&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;bar&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;baz&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;are going to be replaced by:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;timer&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;wrap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;my_func_duration&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)(&lt;/span&gt;&lt;span class="n"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;)(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;foo&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;bar&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;baz&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now we know exactly what to implement:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;time&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;functools&lt;/span&gt;
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Timer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;object&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="fm"&gt;__init__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;pass&lt;/span&gt;
+
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;wrap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;create_decorator&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+            &lt;span class="nd"&gt;@functools.wraps&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+            &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;decorator&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;**&lt;/span&gt;&lt;span class="n"&gt;kwargs&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+                &lt;span class="n"&gt;start_timestamp&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+                &lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;**&lt;/span&gt;&lt;span class="n"&gt;kwargs&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+                &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;{}: {}&amp;quot;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;start_timestamp&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;decorator&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;create_decorator&lt;/span&gt;
+
+&lt;span class="n"&gt;timer&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Timer&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+&lt;span class="nd"&gt;@timer.wrap&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;my_func_duration&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;my_func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;arg1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;arg2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="o"&gt;...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We ignored the &lt;cite&gt;Reporter()&lt;/cite&gt; and just printed the duration, to focus on the implementation
+of the decorator itself.&lt;/p&gt;
+</content><category term="python"></category><category term="decorators"></category></entry><entry><title>Skipping Tests</title><link href="/skipping-tests/" rel="alternate"></link><published>2016-10-01T10:15:49+00:00</published><updated>2016-10-01T10:15:49+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2016-10-01:/skipping-tests/</id><summary type="html">&lt;p&gt;Sometimes a test should be skipped for a good reason (some resource is not available
+for a while and mocking is not an option, or tests are assumed to be
+impacting each other, etc.).&lt;/p&gt;
+&lt;p&gt;Most test runners support a way to mark a test to be skipped in a proper …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Sometimes a test should be skipped for a good reason (some resource is not available
+for a while and mocking is not an option, or tests are assumed to be
+impacting each other, etc.).&lt;/p&gt;
+&lt;p&gt;Most test runners support a way to mark a test to be skipped in a proper way,
+so that later it won't be forgotten, being skipped unnoticed.&lt;/p&gt;
+&lt;p&gt;To demonstrate a concrete example, as part of our tests we'd like to call
+an API, that creates a state that we'd like to assert, and for some
+reasons we need to skip the test.
+The &lt;cite&gt;ApiClient.lights_on()&lt;/cite&gt; turns on the lights in the room.
+But currently our test setup can assert if the lights are on/off
+only on Linux platforms.
+The &lt;cite&gt;ApiClient.rm_files()&lt;/cite&gt; removes some files from a network mounted drive. But
+there is a bug in the API that is causing our lunches to magically disappear.
+Also we should not call any of the methods from this API, when the load on
+the server is high.&lt;/p&gt;
+&lt;div class="section" id="python-unittest"&gt;
+&lt;h2&gt;Python unittest&lt;/h2&gt;
+&lt;p&gt;Python's standard library &lt;a class="reference external" href="http://docs.python.org/library/unittest.html"&gt;unittest&lt;/a&gt; module
+provides the &lt;cite&gt;skip()&lt;/cite&gt; function decorator to decorate the test methods, or the whole
+test class to be skipped.&lt;/p&gt;
+&lt;p&gt;Conditional skips are also supported by &lt;cite&gt;skipIf()&lt;/cite&gt; and &lt;cite&gt;skipUnless()&lt;/cite&gt; decorators.&lt;/p&gt;
+&lt;p&gt;The &lt;cite&gt;TestCase&lt;/cite&gt; class provides the &lt;cite&gt;skipTest()&lt;/cite&gt; method as well to skip tests.
+It can be called in the test method itself or during the &lt;cite&gt;setUp&lt;/cite&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;unittest&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;TestCase&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;skip&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;skipUnless&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;platform&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;system&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;app.module.apiclient&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;ApiClient&lt;/span&gt;
+
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;ApiClientTest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TestCase&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;setUp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;load_is_high&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+            &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;skipTest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;can&amp;#39;t call api because load is high&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;create_network_files&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lights_off&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;tearDown&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;remove_network_files_if_exist&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lights_off&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="c1"&gt;# save the planet&lt;/span&gt;
+
+    &lt;span class="nd"&gt;@skip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;can&amp;#39;t call api because of a bug in there causing our lunch to disappear&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;test_removes_network_files&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;ApiClient&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;rm_files&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;assert_network_files_removed&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="nd"&gt;@skipUnless&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;system&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="ow"&gt;is&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;Linux&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;we can&amp;#39;t assert lights are on yet&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;test_turns_on_lights&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;ApiClient&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lights_on&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;assert_lights_are_on&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="phpunit"&gt;
+&lt;h2&gt;PHPUnit&lt;/h2&gt;
+&lt;p&gt;For PHP/HackLang projects a common test framework and test runner is
+&lt;a class="reference external" href="https://phpunit.de"&gt;PHPUnit&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The method &lt;a class="reference external" href="https://phpunit.de/manual/current/en/incomplete-and-skipped-tests.html#incomplete-and-skipped-tests.skipping-tests"&gt;marktTestSkipped&lt;/a&gt;
+of the &lt;cite&gt;PHPUnit_Framework_TestCase&lt;/cite&gt; class can be used to skip the test.&lt;/p&gt;
+&lt;p&gt;PHPUnit provides the &lt;cite&gt;&amp;#64;requires&lt;/cite&gt; annotation to skip a test if it requires a specific
+platform (OS, PHP version, extension) which is not available.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span class="k"&gt;namespace&lt;/span&gt; &lt;span class="nx"&gt;Tests\App\Module&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;use&lt;/span&gt; &lt;span class="nx"&gt;App\Module\ApiClient&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;ApiClientTest&lt;/span&gt; &lt;span class="k"&gt;extends&lt;/span&gt; &lt;span class="nx"&gt;\PHPUnit_Framework_TestCase&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;setUp&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;loadIsHigh&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;markTestSkipped&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+                &lt;span class="s2"&gt;&amp;quot;can&amp;#39;t call api because load is high&amp;quot;&lt;/span&gt;
+            &lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
+        &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;createNetworkFiles&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+        &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;lightsOff&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;tearDown&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;removeNetworkFilesIfExist&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+        &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;lightsOff&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt; &lt;span class="c1"&gt;// save the planet&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;testRemovesNetworkFiles&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;markTestSkipped&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+            &lt;span class="s2"&gt;&amp;quot;can&amp;#39;t call api because of a bug in there causing our lunch to disappear&amp;quot;&lt;/span&gt;
+        &lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="nx"&gt;ApiClient&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;rmFiles&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+        &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;assertNetworkFilesRemoved&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="sd"&gt;/**&lt;/span&gt;
+&lt;span class="sd"&gt;     * @requires OS Linux&lt;/span&gt;
+&lt;span class="sd"&gt;     */&lt;/span&gt;
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;testTurnsOnLights&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="nx"&gt;ApiClient&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;lightsOn&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+        &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;assertLightsAreOn&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Another way to skip tests using PHPUnit annotations, is to define a group to be
+excluded from tests to run, then annotate the tests to skip with that group
+using &lt;cite&gt;&amp;#64;group&lt;/cite&gt; annotation.&lt;/p&gt;
+&lt;p&gt;This example adds a group to be excluded from tests in PHPUnit configuration file
+(&lt;cite&gt;phpunit.xml&lt;/cite&gt;).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;&amp;lt;?xml version=&amp;quot;1.0&amp;quot; encoding=&amp;quot;UTF-8&amp;quot; ?&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;phpunit&lt;/span&gt; &lt;span class="na"&gt;color=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;true&amp;quot;&lt;/span&gt;&lt;span class="nt"&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class="nt"&gt;&amp;lt;groups&amp;gt;&lt;/span&gt;
+        &lt;span class="nt"&gt;&amp;lt;exclude&amp;gt;&lt;/span&gt;
+            &lt;span class="nt"&gt;&amp;lt;group&amp;gt;&lt;/span&gt;skip&lt;span class="nt"&gt;&amp;lt;/group&amp;gt;&lt;/span&gt;
+        &lt;span class="nt"&gt;&amp;lt;/exclude&amp;gt;&lt;/span&gt;
+    &lt;span class="nt"&gt;&amp;lt;/groups&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;/phpunit&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now tests annoated by &lt;cite&gt;&amp;#64;group skip&lt;/cite&gt; are skipped.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span class="k"&gt;namespace&lt;/span&gt; &lt;span class="nx"&gt;Tests\App\Module&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;ApiClientTest&lt;/span&gt; &lt;span class="k"&gt;extends&lt;/span&gt; &lt;span class="nx"&gt;\PHPUnit_Framework_TestCase&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="sd"&gt;/**&lt;/span&gt;
+&lt;span class="sd"&gt;     * @group skip&lt;/span&gt;
+&lt;span class="sd"&gt;     */&lt;/span&gt;
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;testRemovesNetworkFiles&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="c1"&gt;// ...&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The whole test case can be skipped in this way.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span class="k"&gt;namespace&lt;/span&gt; &lt;span class="nx"&gt;Tests\App\Module&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="sd"&gt;/**&lt;/span&gt;
+&lt;span class="sd"&gt; * @group skip&lt;/span&gt;
+&lt;span class="sd"&gt; */&lt;/span&gt;
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;ApiClientTest&lt;/span&gt; &lt;span class="k"&gt;extends&lt;/span&gt; &lt;span class="nx"&gt;\PHPUnit_Framework_TestCase&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;testRemovesNetworkFiles&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="c1"&gt;// ...&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+</content><category term="php"></category><category term="python"></category><category term="tests"></category></entry><entry><title>Mixed DDL and DML SQL Commands in Doctrine Migrations</title><link href="/mixed-ddl-dml-in-doctrine-migrations/" rel="alternate"></link><published>2015-10-15T11:25:49+00:00</published><updated>2015-10-14T10:25:23+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2015-10-15:/mixed-ddl-dml-in-doctrine-migrations/</id><summary type="html">&lt;p&gt;Doctrine is a useful library when working on a heavy DB dependent application
+in PHP/HackLang. It provides migrations as a tool to ease the process of applying
+changes to the database.&lt;/p&gt;
+&lt;p&gt;Each migration version is a class (often extends an abstract migration
+class provided by Doctrine), which specifies the …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Doctrine is a useful library when working on a heavy DB dependent application
+in PHP/HackLang. It provides migrations as a tool to ease the process of applying
+changes to the database.&lt;/p&gt;
+&lt;p&gt;Each migration version is a class (often extends an abstract migration
+class provided by Doctrine), which specifies the steps required to migrate
+the DB from previous version to this one (&lt;tt class="docutils literal"&gt;up&lt;/tt&gt; method),
+and what should be done to revert the changes (&lt;tt class="docutils literal"&gt;down&lt;/tt&gt; method).
+Hook methods &lt;tt class="docutils literal"&gt;preUp&lt;/tt&gt;/&lt;tt class="docutils literal"&gt;preDown&lt;/tt&gt; and &lt;tt class="docutils literal"&gt;postUp/postDown&lt;/tt&gt; can be defined
+in the version class and are called before and after the respected methods.&lt;/p&gt;
+&lt;p&gt;The name of the class (and so the name of the file) should start with &lt;em&gt;Version&lt;/em&gt;,
+and the rest would be the version. If doctrine command line tool is used to
+generate the migration file, it would be named in YYYYMMDDHHmmSS format,
+but there are no requirements and it can be named anything.
+So a human readable description of the version can be used for the name as well,
+or a mix of both.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;&amp;lt;?php&lt;/span&gt; &lt;span class="c1"&gt;// file: Version20151015114023_CreateGatewayTable.php&lt;/span&gt;
+
+&lt;span class="k"&gt;namespace&lt;/span&gt; &lt;span class="nx"&gt;DoctrineMigrations&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;use&lt;/span&gt; &lt;span class="nx"&gt;Doctrine\DBAL\Migrations\AbstractMigration&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;use&lt;/span&gt; &lt;span class="nx"&gt;Doctrine\DBAL\Schema\Schema&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;use&lt;/span&gt; &lt;span class="nx"&gt;Doctrine\DBAL\Types\Type&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Version20151015114023_CreateGatewayTable&lt;/span&gt; &lt;span class="k"&gt;extends&lt;/span&gt; &lt;span class="nx"&gt;AbstractMigration&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="no"&gt;TABLE_NAME&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;gateway&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;up&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;Schema&lt;/span&gt; &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;createTable&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;self&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;TABLE_NAME&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addOption&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;charset&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;utf8&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addOption&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;collate&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;utf8_bin&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addColumn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+            &lt;span class="s1"&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="nx"&gt;Type&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;INTEGER&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="p"&gt;[&lt;/span&gt;
+                &lt;span class="s1"&gt;&amp;#39;unsigned&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="k"&gt;true&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                &lt;span class="s1"&gt;&amp;#39;notnull&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="k"&gt;true&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                &lt;span class="s1"&gt;&amp;#39;autoincrement&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="k"&gt;true&lt;/span&gt;
+            &lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;setPrimaryKey&lt;/span&gt;&lt;span class="p"&gt;([&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addColumn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;name&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;Type&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;STRING&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;length&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;64&lt;/span&gt;&lt;span class="p"&gt;]);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addColumn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;region&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;Type&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;STRING&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;length&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;]);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addUniqueIndex&lt;/span&gt;&lt;span class="p"&gt;([&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;name&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;region&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]);&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;down&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;Schema&lt;/span&gt; &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;dropTable&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;self&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;TABLE_NAME&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The migration tool passes an instance of &lt;tt class="docutils literal"&gt;Doctrine\DBAL\Schema\Schema&lt;/tt&gt; to both
+&lt;tt class="docutils literal"&gt;up&lt;/tt&gt; and &lt;tt class="docutils literal"&gt;down&lt;/tt&gt; methods of the version class, so these methods can modify
+the schema as required.&lt;/p&gt;
+&lt;p&gt;The migration tool calls the &lt;tt class="docutils literal"&gt;up&lt;/tt&gt;/&lt;tt class="docutils literal"&gt;down&lt;/tt&gt; methods and compares the (possibly updated)
+schema with the schema before running the migration, creates a list of SQL commands to migrate from the
+older schema to the new one, and then runs those SQL commands.&lt;/p&gt;
+&lt;p&gt;The &lt;tt class="docutils literal"&gt;AbstractMigration&lt;/tt&gt; class provides &lt;tt class="docutils literal"&gt;addSql&lt;/tt&gt; method which accepts raw SQL.
+However these SQL commands are not executed right away when &lt;tt class="docutils literal"&gt;addSql&lt;/tt&gt; is called,
+but stored in a queue (an array) to be executed later.
+This method is specially useful when there is no (easy) way to modify the database
+using the schema instance, or a database specific command is required,
+or the migration requires to modify the data and not just the schema itself.&lt;/p&gt;
+&lt;p&gt;What if the migration requires to change the schema, and migrate the data afterwards?
+Although it seems that &lt;em&gt;post&lt;/em&gt; action hook methods could be where we would migrate the data,
+current version of Doctrine migrations (1.1), does not run SQL commands registered
+in post migration methods automatically.
+This means that calling &lt;tt class="docutils literal"&gt;addSql&lt;/tt&gt; in &lt;em&gt;post&lt;/em&gt; hooks would have no effect.&lt;/p&gt;
+&lt;p&gt;There is a catch in using &lt;tt class="docutils literal"&gt;up&lt;/tt&gt; and &lt;tt class="docutils literal"&gt;down&lt;/tt&gt; methods themselves to migrate the data.
+The migration tool creates the list of SQL commands required to migrate the schema,
+and appends them to the SQL commands queue, after the &lt;tt class="docutils literal"&gt;up&lt;/tt&gt; and &lt;tt class="docutils literal"&gt;down&lt;/tt&gt;
+methods are called.&lt;/p&gt;
+&lt;p&gt;This means that all the calls to &lt;tt class="docutils literal"&gt;addSql&lt;/tt&gt; will be in the SQL commands queue
+before the ones that change the schema. So those SQL commands can not rely on the
+new schema, since they will execute while the database is still in previous version.&lt;/p&gt;
+&lt;p&gt;One solution is not using the &lt;tt class="docutils literal"&gt;Schema&lt;/tt&gt; instance at all
+and just use &lt;tt class="docutils literal"&gt;addSql&lt;/tt&gt; first to change the schema, and then to migrate the data.&lt;/p&gt;
+&lt;p&gt;Another solution is to use the &lt;tt class="docutils literal"&gt;connection&lt;/tt&gt; property of the &lt;tt class="docutils literal"&gt;Version&lt;/tt&gt; class in
+&lt;tt class="docutils literal"&gt;postUp&lt;/tt&gt;/&lt;tt class="docutils literal"&gt;postDown&lt;/tt&gt; methods.
+Each migration version class is provided by an instance of &lt;tt class="docutils literal"&gt;Doctrine\DBAL\Connection&lt;/tt&gt;
+which can be used to execute any query directly.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;&amp;lt;?php&lt;/span&gt; &lt;span class="c1"&gt;// file: Version20151015114023_CreateGatewayTable.php&lt;/span&gt;
+
+&lt;span class="k"&gt;namespace&lt;/span&gt; &lt;span class="nx"&gt;DoctrineMigrations&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;use&lt;/span&gt; &lt;span class="nx"&gt;Doctrine\DBAL\Migrations\AbstractMigration&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;use&lt;/span&gt; &lt;span class="nx"&gt;Doctrine\DBAL\Schema\Schema&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;use&lt;/span&gt; &lt;span class="nx"&gt;Doctrine\DBAL\Types\Type&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Version20151015114023_CreateGatewayTable&lt;/span&gt; &lt;span class="k"&gt;extends&lt;/span&gt; &lt;span class="nx"&gt;AbstractMigration&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="no"&gt;TABLE_NAME&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;gateway&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;up&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;Schema&lt;/span&gt; &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;createTable&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;self&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;TABLE_NAME&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addOption&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;charset&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;utf8&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addOption&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;collate&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;utf8_bin&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addColumn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+            &lt;span class="s1"&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="nx"&gt;Type&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;INTEGER&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="p"&gt;[&lt;/span&gt;
+                &lt;span class="s1"&gt;&amp;#39;unsigned&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="k"&gt;true&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                &lt;span class="s1"&gt;&amp;#39;notnull&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="k"&gt;true&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                &lt;span class="s1"&gt;&amp;#39;autoincrement&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="k"&gt;true&lt;/span&gt;
+            &lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;setPrimaryKey&lt;/span&gt;&lt;span class="p"&gt;([&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addColumn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;name&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;Type&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;STRING&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;length&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;64&lt;/span&gt;&lt;span class="p"&gt;]);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addColumn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;region&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;Type&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;STRING&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;length&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;]);&lt;/span&gt;
+        &lt;span class="nv"&gt;$table&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;addUniqueIndex&lt;/span&gt;&lt;span class="p"&gt;([&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;name&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;region&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]);&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;down&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;Schema&lt;/span&gt; &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;dropTable&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;self&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;TABLE_NAME&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;function&lt;/span&gt; &lt;span class="nf"&gt;postUp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;Schema&lt;/span&gt; &lt;span class="nv"&gt;$schema&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nv"&gt;$this&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;connection&lt;/span&gt;&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;&lt;span class="na"&gt;insert&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+            &lt;span class="nx"&gt;self&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="na"&gt;TABLE_NAME&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;name&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;first&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;region&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;MY&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+</content><category term="php"></category><category term="doctrine"></category></entry><entry><title>Python Virtual Environments</title><link href="/python-virtual-environments/" rel="alternate"></link><published>2015-10-05T21:46:49+00:00</published><updated>2015-10-05T21:46:49+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2015-10-05:/python-virtual-environments/</id><summary type="html">&lt;p&gt;Problem: Different applications might require different versions of the same libraries, which version of those libraries should be installed?&lt;/p&gt;
+&lt;p&gt;Problem: There are tools installed with the operation system written in Python, they require specific versions of some libraries, and the ones provided by
+the operating system packages are to satisfy …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Problem: Different applications might require different versions of the same libraries, which version of those libraries should be installed?&lt;/p&gt;
+&lt;p&gt;Problem: There are tools installed with the operation system written in Python, they require specific versions of some libraries, and the ones provided by
+the operating system packages are to satisfy those requirements. How about my application
+specific requirements that uses different versions of those libraries?&lt;/p&gt;
+&lt;p&gt;Question: When a library is required, should the one provided by the operation system package management be installed, or the one available on PyPI?&lt;/p&gt;
+&lt;p&gt;Answer: Use virtual environments and install the exact version that the app requires from PyPI.&lt;/p&gt;
+&lt;p&gt;Each app could use its own virtual environment where only the desired versions of all required libraries are available.
+Setting up a virtual environment means using a project specific path (other than the system shared path) to install libraries, and
+when Python runs, modify &lt;cite&gt;sys.path&lt;/cite&gt; to include this path to search for modules to import.&lt;/p&gt;
+&lt;p&gt;And using the &lt;a class="reference external" href="https://pypi.python.org/pypi/virtualenv"&gt;right tool&lt;/a&gt; it's even easier in practice than mentioned here.&lt;/p&gt;
+&lt;div class="section" id="virtualenv"&gt;
+&lt;h2&gt;Virtualenv&lt;/h2&gt;
+&lt;p&gt;Install &lt;cite&gt;virtualenv&lt;/cite&gt; and make a path and create a virtual environment in there.
+Then using shell helper files (provided by &lt;cite&gt;virtualenv&lt;/cite&gt;), the shell path is modified so when Python is called,
+it's the one configured to search the virtual environment specific path for modules.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ sudo pip install virtualenv
+$ mkdir ~/.virtualenv/myapp
+$ virtualenv ~/.virtualenv/myapp
+$ ls -l ~/.virtualenv/myapp/bin/
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;There will be files named &lt;strong&gt;activate&lt;/strong&gt; for different shells (Bash, Csh, Fish). Bash is very common so:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ &lt;span class="nb"&gt;source&lt;/span&gt; ~/.virtualenv/myapp/bin/activate
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;For example I use &lt;a class="reference external" href="http://fishshell.com/"&gt;fish&lt;/a&gt;, so:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;~&amp;gt; &lt;span class="nb"&gt;source&lt;/span&gt; ~/.virtualenv/myapp/bin/activate.fish
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now check &lt;cite&gt;sys.path&lt;/cite&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;~&amp;gt; python -c &lt;span class="s1"&gt;&amp;#39;import sys; print sys.path&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;These samples used the default Python available (the Python version that executes when you type &lt;cite&gt;python&lt;/cite&gt; in shell).
+However it's possible to chose a specific version of Python for the virtual environment (This version of Python should already be installed)
+For example for the same app, I'd like to setup a Python 3.4 virtual environment:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;~&amp;gt; mkdir ~/.virtualenv/myapp-py3.4
+~&amp;gt; virtualenv --python&lt;span class="o"&gt;=&lt;/span&gt;python3.4 ~/.virtualenv/myapp-py3.4
+~&amp;gt; &lt;span class="nb"&gt;source&lt;/span&gt; ~/.virtualenv/myapp-py3.4/bin/activate.fish
+~&amp;gt; python -c &lt;span class="s1"&gt;&amp;#39;import sys; print(sys.path)&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;By default &lt;cite&gt;virtualenv&lt;/cite&gt; sets up &lt;cite&gt;pip&lt;/cite&gt; as well, so when calling &lt;cite&gt;pip&lt;/cite&gt;, it's the one from the virtual environment, and it will install all the packages
+in the virtual environment path.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;~&amp;gt; pip install -r requirements.txt
+&lt;span class="c1"&gt;# installs all packages under ~/.virtualenv/myapp-py3.4&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="venv"&gt;
+&lt;h2&gt;Venv&lt;/h2&gt;
+&lt;p&gt;Virtual environments are so useful that starting from Python 3.3 standard library provides
+a &lt;a class="reference external" href="https://docs.python.org/3.3/library/venv.html"&gt;tool&lt;/a&gt; to work with them.&lt;/p&gt;
+&lt;p&gt;Using &lt;cite&gt;venv&lt;/cite&gt; is about the same as &lt;cite&gt;virtualenv&lt;/cite&gt;, only instead of using &lt;cite&gt;virtualenv&lt;/cite&gt; standalone command, the &lt;cite&gt;venv&lt;/cite&gt; module should be used as a script:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;~&amp;gt; python3.4 -m venv ~/.venv/myapp-py3.4
+~&amp;gt; &lt;span class="nb"&gt;source&lt;/span&gt; ~/.venv/myapp-py3.4/bin/activate.fish
+~&amp;gt; python -c &lt;span class="s1"&gt;&amp;#39;import sys; print(sys.path)&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;div class="admonition note"&gt;
+&lt;p class="first admonition-title"&gt;Note&lt;/p&gt;
+&lt;p class="last"&gt;Python uses the &lt;cite&gt;ensurepip&lt;/cite&gt; module to provide pip for the virtual environments
+created by &lt;cite&gt;venv&lt;/cite&gt;.
+Unfortunately Python 3.4 distributed with Ubuntu Trusty Tahr
+&lt;a class="reference external" href="https://bugs.launchpad.net/ubuntu/+source/python3.4/+bug/1290847"&gt;does not include this module&lt;/a&gt;.
+So creating an environment without pip works fine, but pip seems to be quite useful most of times.
+Installing &lt;cite&gt;python3.4-venv&lt;/cite&gt; resolves this issue.&lt;/p&gt;
+&lt;/div&gt;
+&lt;p&gt;Virtual environments can be used to deploy projects on production as well so multiple projects can be deployed on the same system,
+using their own versions of libraries.&lt;/p&gt;
+&lt;/div&gt;
+</content><category term="python"></category></entry><entry><title>Programming</title><link href="/programming/" rel="alternate"></link><published>2014-07-24T14:17:49+00:00</published><updated>2014-07-24T14:23:18+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2014-07-24:/programming/</id><summary type="html">&lt;p&gt;Programming is a creative and challenging process, and this makes it interesting.
+There is so much to learn and there is so much to do. But this is common to get lost in this ocean and forget what was the original destination.
+Software programs exist to solve problems and empower …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Programming is a creative and challenging process, and this makes it interesting.
+There is so much to learn and there is so much to do. But this is common to get lost in this ocean and forget what was the original destination.
+Software programs exist to solve problems and empower ideas. Easing communications and sharing knowledge, helps to spread the ideas so people would have the chance to add up to them.&lt;/p&gt;
+&lt;p&gt;I believe at the end of the day what matters is how much a program helps users to solve their problems and find better ways to do their tasks.
+If the program is not solving users issues properly, it is not doing what it should have done, no matter which language or technologies have been used to write it,
+or how clean the code is and how well it is designed. Although these details might be worthy to mind, only if they are helping the development process of the program itself.&lt;/p&gt;
+</content><category term="thoughts"></category></entry><entry><title>Mini PyCon MY 2014</title><link href="/mini-pycon-my-2014/" rel="alternate"></link><published>2014-04-13T03:07:05+00:00</published><updated>2014-04-13T03:08:05+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2014-04-13:/mini-pycon-my-2014/</id><summary type="html">&lt;p&gt;We had a great time at &lt;a class="reference external" href="http://www.pycon.my/mini-pycon-my-2014"&gt;Mini PyCon MY&lt;/a&gt; this March.
+Here are the slides from my talk about concurrency in Python.&lt;/p&gt;
+&lt;script async class="speakerdeck-embed" data-id="c9eed1f08dbb01311b7972f9dd426e7d" data-ratio="1.33333333333333" src="//speakerdeck.com/assets/embed.js"&gt;&lt;/script&gt;</summary><content type="html">&lt;p&gt;We had a great time at &lt;a class="reference external" href="http://www.pycon.my/mini-pycon-my-2014"&gt;Mini PyCon MY&lt;/a&gt; this March.
+Here are the slides from my talk about concurrency in Python.&lt;/p&gt;
+&lt;script async class="speakerdeck-embed" data-id="c9eed1f08dbb01311b7972f9dd426e7d" data-ratio="1.33333333333333" src="//speakerdeck.com/assets/embed.js"&gt;&lt;/script&gt;</content><category term="slides"></category><category term="python"></category></entry><entry><title>Graphite</title><link href="/graphite/" rel="alternate"></link><published>2013-07-28T00:00:00+00:00</published><updated>2014-01-10T11:11:05+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2013-07-28:/graphite/</id><summary type="html">&lt;p&gt;Graphite is an open source project to collect and graph data that changes over time.
+It contains three components: a network server to receive the data, a special data storage format, and a web interface to show graphs.
+Graphite is developed in Python programming language and is designed to be …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Graphite is an open source project to collect and graph data that changes over time.
+It contains three components: a network server to receive the data, a special data storage format, and a web interface to show graphs.
+Graphite is developed in Python programming language and is designed to be scalable and to handle high volume data.&lt;/p&gt;
+&lt;p&gt;Carbon is the server daemon developed using &lt;a class="reference external" href="http://twistedmatrix.com/"&gt;Twisted&lt;/a&gt; event driven framework to handle a large amount of traffic for a lot of clients.
+It receives data packets and stores them in whisper files. The data packets contain a name (called a metric), a numeric value and a timestamp.
+Carbon receives data over TCP (default port is 2003) in a simple text line format containing the metric name, the value and the timestamp separated by space.
+Using dots in metric names causes Carbon to create a hierarchy. Carbon sends nothing in response and the connection could be used to send more data.&lt;/p&gt;
+&lt;p&gt;Carbon has an aggregator and a relay service as well, but the main daemon that receives the data and stores whisper files is carbon-cache.
+If you need to distribute the data upon arrival (to multiple carbon-caches or integrate with other services),
+you could configure and use carbon-relay daemon.
+For better performance Carbon also accepts pickled (Python serialized) data. This format is used between carbon-relay and carbon-cache (default port is 2004).&lt;/p&gt;
+&lt;p&gt;Whisper files are time series database files (like &lt;a class="reference external" href="http://en.wikipedia.org/wiki/RRDtool"&gt;RRDtool&lt;/a&gt;) written specially to store numeric data over time.
+Each whisper file has a header section for meta data and a set of archive sections.
+Each archive section stores a sequence of pairs of timestamp and a numeric value.&lt;/p&gt;
+&lt;p&gt;Graphite web interface reads whisper files and renders graph images. Graphite web interface is written using Python &lt;a class="reference external" href="https://www.djangoproject.com/"&gt;Django&lt;/a&gt; web framework
+and uses &lt;a class="reference external" href="http://cairographics.org/"&gt;Cairo&lt;/a&gt; library to generate graph images, so Python Cairo bindings are required to be installed.&lt;/p&gt;
+&lt;p&gt;It is possible to install Carbon and Graphite separately. By default Carbon and Graphite are installed on the same path on &lt;em&gt;/opt/graphite&lt;/em&gt;.
+This path is called &lt;em&gt;GRAPHITE_ROOT&lt;/em&gt;, and most other paths are configured to be relative to this path by default.
+This path (like other important paths) could be specified using an environment variable.
+For more information about the project and different installation instructions please refer to graphite documentations.
+We install Carbon and Graphite using pip, Python package management tool.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo pip install django django-tagging
+sudo pip install whisper carbon graphite-web
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;It's recommended to run the service as a separate user:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo useradd -d /opt/graphite -s /bin/false graphite
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Carbon should be configured using a few config files in &lt;em&gt;$GRAPHITE_CONF_DIR&lt;/em&gt; path, which is by default &lt;em&gt;conf&lt;/em&gt; directory in &lt;em&gt;$GRAPHITE_ROOT&lt;/em&gt; (&lt;em&gt;/opt/graphite/conf&lt;/em&gt;).
+After the installation examples for all config files are available to be used as a base for desired configurations. These config files are required for Carbon to start:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;carbon.conf: configures behavior of the Carbon services, like setting the process user, port numbers to listen, enable and configure relay, etc.&lt;/li&gt;
+&lt;li&gt;storage-schemas.conf: specification of whisper files, how often to aggregate data points. by default it would keep 1 minute data point for 1 day.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;If you need to keep more fine grained data points for a group of metrics, you could define a different storage schema for them.
+For example we would like to have more data points for our database metrics (whose name start with db.), by keeping 5 second data points for 1 day,
+aggregated 10 seconds for a week, and 30 second aggregates for a month. Modify &lt;em&gt;storage-schemas.conf&lt;/em&gt; file like this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;[carbon]&lt;/span&gt;
+&lt;span class="na"&gt;pattern&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;^carbon\.&lt;/span&gt;
+&lt;span class="na"&gt;retentions&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;60:90d&lt;/span&gt;
+
+&lt;span class="k"&gt;[db]&lt;/span&gt;
+&lt;span class="na"&gt;pattern&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;^db\.&lt;/span&gt;
+&lt;span class="na"&gt;retentions&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;5s:1d, 10s:7d, 30s:30d, 60s:90d&lt;/span&gt;
+
+&lt;span class="k"&gt;[default_1min_for_1day]&lt;/span&gt;
+&lt;span class="na"&gt;pattern&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;.*&lt;/span&gt;
+&lt;span class="na"&gt;retentions&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;60s:1d&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Carbon stores the whisper files in the &lt;em&gt;$GRAPHITE_STORAGE_DIR&lt;/em&gt; path, which is by default &lt;em&gt;storage&lt;/em&gt; directory under &lt;em&gt;$GRAPHITE_ROOT&lt;/em&gt; (&lt;em&gt;/opt/graphite/storage&lt;/em&gt;).
+Both Carbon and Graphite store log files which are by default stored in log &lt;em&gt;directory&lt;/em&gt; under this storage path.
+So It is require that graphite user has write permission to the storage path.&lt;/p&gt;
+&lt;p&gt;Start the carbon-cache service:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo chown -R graphite:graphite /opt/graphite/storage
+sudo /opt/graphite/bin/carbon-cache start
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;When whisper library is installed, it comes with a set of simple command line tools to display data in whisper files.
+Use &lt;em&gt;whisper-info.py&lt;/em&gt;, &lt;em&gt;whisper-dump.py&lt;/em&gt; and &lt;em&gt;whisper-fetch.py&lt;/em&gt; to view the data and &lt;em&gt;whisper-create.py&lt;/em&gt; and &lt;em&gt;whisper-update.py&lt;/em&gt; to store data.&lt;/p&gt;
+&lt;p&gt;But we have Graphite for data visualization. Graphite is configured by &lt;em&gt;/opt/graphite/webapp/graphite/local_settings.py&lt;/em&gt;.
+After installation a sample config file is available, so save a copy of the file with proper name and edit the file.
+This file is a Python source file that defines variables to configure Graphite. Set the timezone used for the app, set the location for &lt;em&gt;GRAPHITE_ROOT&lt;/em&gt;,
+or custom path to where whisper files are stored. Default values are all configured so they match the default installation of Carbon.
+The one required part is the database access information in the file. For simplicity we are going to use a sqlite DB file so uncomment these lines
+(if these lines are not in you config file, append these lines):&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;DATABASES&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="s1"&gt;&amp;#39;default&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="s1"&gt;&amp;#39;NAME&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;/opt/graphite/storage/graphite.db&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s1"&gt;&amp;#39;ENGINE&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;django.db.backends.sqlite3&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s1"&gt;&amp;#39;USER&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s1"&gt;&amp;#39;PASSWORD&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s1"&gt;&amp;#39;HOST&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s1"&gt;&amp;#39;PORT&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;&amp;#39;&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We should create the sqlite file first by using the Django &lt;em&gt;manage.py&lt;/em&gt; script:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo python /opt/graphite/webapp/graphite/manage.py syncdb
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now the sqlite file is created and ready to be used. Set proper permissions for it and check your Graphite installation by running its development web server:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo chown graphite:graphite /opt/graphite/storage/graphite.db
+sudo -u graphite -- /opt/graphite/bin/run-graphite-devel-server.py --port&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;8080&lt;/span&gt; /opt/graphite
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Note that this web server is not suitable for production and is only used for development/testing purposes.
+Graphite (like other Django based web apps) could be served using any WSGI server and a proper WSGI server should be used for production.
+we are going to use &lt;a class="reference external" href="http://gunicorn.org/"&gt;gunicorn&lt;/a&gt; in this guide.&lt;/p&gt;
+&lt;p&gt;Graphite comes with a sample WSGI entry point file in &lt;em&gt;/opt/graphite/conf/graphite.wsgi.example&lt;/em&gt;. Copy this file to &lt;em&gt;/opt/graphite/conf/graphite_wsgi.py&lt;/em&gt; and then start gunicorn:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo pip install gunicorn
+&lt;span class="nb"&gt;cd&lt;/span&gt; /opt/graphite/conf
+sudo gunicorn -b &lt;span class="s1"&gt;&amp;#39;0.0.0.0:8080&amp;#39;&lt;/span&gt; -u graphite -g graphite -w &lt;span class="m"&gt;2&lt;/span&gt; graphite_wsgi:application
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If after installing Graphite, it failed to generate graphs, make sure &lt;a class="reference external" href="https://pypi.python.org/pypi/pycairo"&gt;pycairo&lt;/a&gt; is installed on your system.
+Installing pycairo from a prebuilt binary package (like from the OS package management) is easier since installing it using pip requires building
+the library from source, So you would need a C compiler, Python headers, Cairo and Cairo development files.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo apt-get install python-cairo
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;And now graphite can render graph images.&lt;/p&gt;
+</content><category term="statsd"></category><category term="graphite"></category></entry><entry><title>Statsd</title><link href="/statsd/" rel="alternate"></link><published>2013-07-25T00:00:00+00:00</published><updated>2014-01-10T10:50:52+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2013-07-25:/statsd/</id><summary type="html">&lt;p&gt;This guide sets up a solution using statsd to collect detailed statistics from a system. For an introduction to the concept, please read
+&amp;quot;&lt;a class="reference external" href="/measurement-with-statsd/"&gt;measurement with statsd&lt;/a&gt;&amp;quot;.
+The process is to send data from within the application to statsd server. Statsd server sends data to Graphite for storage and visualization.&lt;/p&gt;
+&lt;p&gt;It …&lt;/p&gt;</summary><content type="html">&lt;p&gt;This guide sets up a solution using statsd to collect detailed statistics from a system. For an introduction to the concept, please read
+&amp;quot;&lt;a class="reference external" href="/measurement-with-statsd/"&gt;measurement with statsd&lt;/a&gt;&amp;quot;.
+The process is to send data from within the application to statsd server. Statsd server sends data to Graphite for storage and visualization.&lt;/p&gt;
+&lt;p&gt;It is better to keep the statsd server as close as possible to hosts sending data. This way you won't have a lot of UDP packets traveling a far distance to reduce
+the chance of packet loss.
+In case of different data centers, you could setup a statsd server in each data center, so hosts in each data center would send their statsd packets to the server
+running in the same data center.
+Then all statsd servers from different data centers flush their data to a central collector server (Carbon/Graphite).
+This transmission is over TCP and happens once every second for each statsd server.&lt;/p&gt;
+&lt;p&gt;We are going to use &lt;a class="reference external" href="https://github.com/cloudant/bucky"&gt;bucky&lt;/a&gt;, a statsd server written in Python, However there are many servers implemented in different languages.
+At work we use Perl extensively and we were more comfortable to use a Perl based solution, so we chose
+&lt;a class="reference external" href="https://metacpan.org/module/Net::Statsd::Server"&gt;Net::Statsd::Server&lt;/a&gt; which is handling quite amount of traffic very well.&lt;/p&gt;
+&lt;div class="section" id="id1"&gt;
+&lt;h2&gt;Bucky&lt;/h2&gt;
+&lt;p&gt;Bucky could be used to collect data through different protocols, for this guide we would disable others and use only statsd.&lt;/p&gt;
+&lt;p&gt;Install bucky using pip Python package manager:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo pip install bucky
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;It could be started by specifying command line options, or read its configurations from a file.
+By default if bucky could not connect to Carbon (data collection service from Graphite) it will retry for maximum of times and then quits.
+We'll make sure that bucky will keep trying every 5 seconds without a limit. Write these configs in &lt;em&gt;bucky.conf&lt;/em&gt; file:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;debug&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;False&lt;/span&gt;
+&lt;span class="n"&gt;full_trace&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;False&lt;/span&gt;
+&lt;span class="n"&gt;log_level&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;INFO&amp;quot;&lt;/span&gt;
+
+&lt;span class="n"&gt;metricsd_enabled&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;False&lt;/span&gt;
+&lt;span class="n"&gt;collectd_enabled&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;False&lt;/span&gt;
+
+&lt;span class="n"&gt;statsd_ip&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;&amp;quot;&lt;/span&gt;
+&lt;span class="n"&gt;statsd_port&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;8125&lt;/span&gt;
+&lt;span class="n"&gt;statsd_enabled&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;True&lt;/span&gt;
+&lt;span class="n"&gt;statsd_flush_time&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;1.0&lt;/span&gt;
+
+&lt;span class="n"&gt;graphite_ip&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;127.0.0.1&amp;quot;&lt;/span&gt;
+&lt;span class="n"&gt;graphite_port&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;2003&lt;/span&gt;
+&lt;span class="n"&gt;graphite_max_reconnects&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+&lt;span class="n"&gt;graphite_reconnect_delay&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;5&lt;/span&gt;
+&lt;span class="n"&gt;graphite_pickle_enabled&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;False&lt;/span&gt;
+&lt;span class="n"&gt;graphite_pickle_buffer_size&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;500&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now start bucky:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;bucky bucky.conf &amp;gt; bucky.log &lt;span class="m"&gt;2&lt;/span&gt;&amp;gt;&lt;span class="p"&gt;&amp;amp;&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Of course this is a quick start, you may want to start it as a system daemon on production.
+Bucky &lt;a class="reference external" href="https://github.com/cloudant/bucky/"&gt;source&lt;/a&gt; distribution comes with scripts for systemd and runit.
+Make sure that Carbon is running so we could store the data.&lt;/p&gt;
+&lt;p&gt;Statsd packets are text over UDP, each line contains a data bucket. Each data bucket has a name, a value and a type (and a sampling factor).
+Most client libraries provide a separate method for each type, so all you need to specify is the bucket name and value.&lt;/p&gt;
+&lt;p&gt;Supported types are:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;timing: measuring the time required for an operation in microseconds units. like the time it takes to execute a database transaction.&lt;/li&gt;
+&lt;li&gt;counter: counting the number of any event or operation. counters could be incremented or decremented. like number of hits for a web page or number of occurrences of an error.&lt;/li&gt;
+&lt;li&gt;gauge: arbitrary values, like CPU usage in percentage or memory usage in bytes.&lt;/li&gt;
+&lt;li&gt;set: count the number of unique values during a sample period. like number of different IP addresses that requested a URL in the given period.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Any programming language with a statsd client library could be used to send data.
+Here we use a sample code in Python using &lt;a class="reference external" href="https://pypi.python.org/pypi/statsd"&gt;statsd&lt;/a&gt; module.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="ch"&gt;#!/usr/bin/env python&lt;/span&gt;
+
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;time&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;random&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;statsd&lt;/span&gt;
+
+&lt;span class="n"&gt;sc&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;statsd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;StatsClient&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;localhost&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;8125&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="c1"&gt;# on user login action&lt;/span&gt;
+&lt;span class="n"&gt;sess_time_start_mics&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt;
+&lt;span class="n"&gt;sc&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;incr&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;user.login&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# profile any operation, like a db transaction&lt;/span&gt;
+&lt;span class="n"&gt;db_time_start_mics&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt;
+&lt;span class="c1"&gt;# sleep to fake a db transaction&lt;/span&gt;
+&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;sc&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;timing&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;db.get_user_data&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;db_time_start_mics&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# ... later on user logout action&lt;/span&gt;
+&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;sc&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;timing&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;user.session&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="n"&gt;sess_time_start_mics&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;sc&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;incr&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;user.logout&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Data is sent from application to bucky, then flushed to Carbon and stored in whisper files.
+Check Carbon storage path to find new files and directories in &lt;em&gt;/opt/graphite/storage/whisper&lt;/em&gt;.
+If you have setup &lt;a class="reference external" href="/graphite/"&gt;Graphite&lt;/a&gt; you could find graphs for login, logout, under &amp;quot;user&amp;quot; node, and &amp;quot;user.session&amp;quot; and &amp;quot;db.get_user_data&amp;quot; nodes under timers.&lt;/p&gt;
+&lt;/div&gt;
+</content><category term="statsd"></category></entry><entry><title>Measurement with statsd</title><link href="/measurement-with-statsd/" rel="alternate"></link><published>2013-06-29T00:00:00+00:00</published><updated>2014-01-10T10:43:00+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2013-06-29:/measurement-with-statsd/</id><summary type="html">&lt;p&gt;Developing and maintaining any system requires many decisions about what to do, where to invest time and energy to get the maximum benefits fast.
+To make correct decisions accurate information is required.
+It is not a valid argument (although might be common) to say &amp;quot;I feel our DB interaction is …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Developing and maintaining any system requires many decisions about what to do, where to invest time and energy to get the maximum benefits fast.
+To make correct decisions accurate information is required.
+It is not a valid argument (although might be common) to say &amp;quot;I feel our DB interaction is slow, lets optimize our data access layer&amp;quot;,
+or &amp;quot;To make our website super fast, I think we should start using CDN services&amp;quot;.
+These decisions could improve performance for sure, but they might not be the best places to start.
+There is a difference between &amp;quot;feeling&amp;quot; and &amp;quot;actually knowing&amp;quot; something. It is only a valid accurate measurement that helps to detect bottlenecks and their affects on the whole system.&lt;/p&gt;
+&lt;p&gt;Systems statistics could be measured either from outside or from inside. the former seems easier to implement because of the abstraction with current system,
+but the accuracy of data could be compromised by network performance. Also it is not easy or even sometimes not possible to profile internals of the system from outside.
+Collecting measurements from within the system is more accurate and could be done in any layer so the internals of the system could be measured as well.
+However it is not desired to use system resources to measure statistics about the system itself.
+It is well known that the performance of a system could be affected while profiling it.&lt;/p&gt;
+&lt;p&gt;A simple solution for this requirement is &lt;a class="reference external" href="http://codeascraft.com/2011/02/15/measure-anything-measure-everything/"&gt;proposed&lt;/a&gt; as &amp;quot;statsd&amp;quot;.
+By sending small chunks of data from within the system to an external service over a lightweight none blocking protocol,
+you could actually collect accurate data with the least amount of affect on the performance. The system is sending the data out,
+so network or remote service performance issues have the least affect on accuracy of it and the system would not wait for a blocking call to store its statistics.
+This simplicity reminds me of syslog, but instead of sending arbitrary log messages, the data is actually the measured statistics.&lt;/p&gt;
+&lt;p&gt;It is not a standard, there is no RFC (yet), and could be implemented totally ad hoc. However the proposal for &amp;quot;statsd&amp;quot; by etsy is simple and practical enough
+that many chose to use it as an &lt;a class="reference external" href="https://github.com/etsy/statsd/"&gt;implementation reference&lt;/a&gt;.
+There are many servers developed in different languages compatible with this reference implementation.&lt;/p&gt;
+&lt;p&gt;Statsd uses UDP to send data buckets to the collector service. Each data bucket is a text message with a name, a type, and a value.
+The statsd server receives the buckets, and on each configured interval flushes the results to available backends which could be a database, another statsd service (relaying),
+or a custom backend.&lt;/p&gt;
+&lt;p&gt;A very common usage is to store the data in time series databases provided by &lt;a class="reference external" href="http://graphite.wikidot.com/"&gt;Graphite&lt;/a&gt; project.
+I'll introduce Graphite and how to implement measuring a system with statsd in another article.&lt;/p&gt;
+</content><category term="statsd"></category></entry><entry><title>Ntop Service On CentOS</title><link href="/ntop-service-on-centos/" rel="alternate"></link><published>2012-11-12T00:00:00+00:00</published><updated>2014-01-10T06:15:52+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2012-11-12:/ntop-service-on-centos/</id><summary type="html">&lt;p&gt;We needed a network analysis tool and decided to use &lt;a class="reference external" href="http://www.ntop.org/products/ntop/"&gt;ntop&lt;/a&gt;. Official ntop website provides binary packages for Ubuntu and CentOS.&lt;/p&gt;
+&lt;p&gt;Ubuntu has an official package for ntop but the package is version 3 and we preferred to use the latest version, so package repositories were no good for us …&lt;/p&gt;</summary><content type="html">&lt;p&gt;We needed a network analysis tool and decided to use &lt;a class="reference external" href="http://www.ntop.org/products/ntop/"&gt;ntop&lt;/a&gt;. Official ntop website provides binary packages for Ubuntu and CentOS.&lt;/p&gt;
+&lt;p&gt;Ubuntu has an official package for ntop but the package is version 3 and we preferred to use the latest version, so package repositories were no good for us.&lt;/p&gt;
+&lt;p&gt;We set up a CentOS 6 server and installed ntop rpm package. But the package did not include an init script. Here is an init script to start/stop ntop in CentOS 6:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="ch"&gt;#!/bin/bash&lt;/span&gt;
+&lt;span class="c1"&gt;#&lt;/span&gt;
+&lt;span class="c1"&gt;# ntop          Start up the ntop as a daemon&lt;/span&gt;
+&lt;span class="c1"&gt;#&lt;/span&gt;
+&lt;span class="c1"&gt;# chkconfig: 2345 55 25&lt;/span&gt;
+&lt;span class="c1"&gt;# description: ntop is a network traffic probe that shows the network usage&lt;/span&gt;
+&lt;span class="c1"&gt;#              This service starts up the ntop as a daemon.&lt;/span&gt;
+&lt;span class="c1"&gt;#&lt;/span&gt;
+&lt;span class="c1"&gt;# processname: ntop&lt;/span&gt;
+&lt;span class="c1"&gt;# config: /etc/ntop.conf&lt;/span&gt;
+&lt;span class="c1"&gt;# pidfile: /usr/local/var/ntop/ntop.pid&lt;/span&gt;
+
+&lt;span class="c1"&gt;### BEGIN INIT INFO&lt;/span&gt;
+&lt;span class="c1"&gt;# Provides: ntop&lt;/span&gt;
+&lt;span class="c1"&gt;# Required-Start: $local_fs $network $syslog&lt;/span&gt;
+&lt;span class="c1"&gt;# Required-Stop: $local_fs $syslog&lt;/span&gt;
+&lt;span class="c1"&gt;# Should-Start: $syslog&lt;/span&gt;
+&lt;span class="c1"&gt;# Should-Stop: $network $syslog&lt;/span&gt;
+&lt;span class="c1"&gt;# Default-Start: 2 3 4 5&lt;/span&gt;
+&lt;span class="c1"&gt;# Default-Stop: 0 1 6&lt;/span&gt;
+&lt;span class="c1"&gt;# Short-Description: Start up the ntop as a daemon&lt;/span&gt;
+&lt;span class="c1"&gt;# Description: ntop is a network traffic probe that shows the network usage&lt;/span&gt;
+&lt;span class="c1"&gt;#                    This service starts up the ntop as a daemon.&lt;/span&gt;
+&lt;span class="c1"&gt;### END INIT INFO&lt;/span&gt;
+
+&lt;span class="c1"&gt;# source function library&lt;/span&gt;
+. /etc/rc.d/init.d/functions
+
+&lt;span class="nv"&gt;runlevel&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="k"&gt;$(&lt;/span&gt;&lt;span class="nb"&gt;set&lt;/span&gt; -- &lt;span class="k"&gt;$(&lt;/span&gt;runlevel&lt;span class="k"&gt;)&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="nb"&gt;eval&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;echo \$&lt;/span&gt;&lt;span class="nv"&gt;$#&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; &lt;span class="k"&gt;)&lt;/span&gt;
+
+&lt;span class="nv"&gt;RETVAL&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;
+&lt;span class="nv"&gt;prog&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;ntop&amp;quot;&lt;/span&gt;
+
+&lt;span class="nv"&gt;NTOPD&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;/usr/local/bin/ntop&amp;quot;&lt;/span&gt;
+&lt;span class="nv"&gt;NTOP_CONF_FILE&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;/etc/ntop.conf&amp;quot;&lt;/span&gt;
+&lt;span class="nv"&gt;PID_FILE&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;/usr/local/var/ntop/ntop.pid&amp;quot;&lt;/span&gt;
+
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;[&lt;/span&gt; -f &lt;span class="nv"&gt;$NTOP_CONF_FILE&lt;/span&gt; &lt;span class="o"&gt;]&lt;/span&gt;
+&lt;span class="k"&gt;then&lt;/span&gt;
+    &lt;span class="nv"&gt;OPTIONS&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;@&lt;/span&gt;&lt;span class="nv"&gt;$NTOP_CONF_FILE&lt;/span&gt;&lt;span class="s2"&gt; --daemon&amp;quot;&lt;/span&gt;
+&lt;span class="k"&gt;else&lt;/span&gt;
+    &lt;span class="nv"&gt;OPTIONS&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;--daemon&amp;quot;&lt;/span&gt;
+&lt;span class="k"&gt;fi&lt;/span&gt;
+
+start&lt;span class="o"&gt;()&lt;/span&gt;
+&lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;[&lt;/span&gt; ! -x &lt;span class="nv"&gt;$NTOPD&lt;/span&gt; &lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="k"&gt;then&lt;/span&gt;
+        &lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;Failed to find &lt;/span&gt;&lt;span class="nv"&gt;$prog&lt;/span&gt;&lt;span class="s2"&gt; exeuctable on &lt;/span&gt;&lt;span class="nv"&gt;$NTOPD&lt;/span&gt;&lt;span class="s2"&gt;!&amp;quot;&lt;/span&gt;
+        &lt;span class="nb"&gt;exit&lt;/span&gt; &lt;span class="m"&gt;5&lt;/span&gt;
+    &lt;span class="k"&gt;fi&lt;/span&gt;
+        &lt;span class="nb"&gt;echo&lt;/span&gt; -n $&lt;span class="s2"&gt;&amp;quot;Starting &lt;/span&gt;&lt;span class="nv"&gt;$prog&lt;/span&gt;&lt;span class="s2"&gt;: &amp;quot;&lt;/span&gt;
+        &lt;span class="nv"&gt;$NTOPD&lt;/span&gt; &lt;span class="nv"&gt;$OPTIONS&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;amp&lt;span class="p"&gt;;&amp;amp;&lt;/span&gt;amp&lt;span class="p"&gt;;&lt;/span&gt; success &lt;span class="o"&gt;||&lt;/span&gt; failure
+    &lt;span class="nv"&gt;RETVAL&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$?&lt;/span&gt;
+    &lt;span class="nv"&gt;PID&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="sb"&gt;`&lt;/span&gt;pidof &lt;span class="nv"&gt;$prog&lt;/span&gt;&lt;span class="sb"&gt;`&lt;/span&gt;
+    &lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="nv"&gt;$PID&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="nv"&gt;$PID_FILE&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nv"&gt;$RETVAL&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+
+stop&lt;span class="o"&gt;()&lt;/span&gt;
+&lt;span class="o"&gt;{&lt;/span&gt;
+        &lt;span class="nb"&gt;echo&lt;/span&gt; -n $&lt;span class="s2"&gt;&amp;quot;Stopping &lt;/span&gt;&lt;span class="nv"&gt;$prog&lt;/span&gt;&lt;span class="s2"&gt;: &amp;quot;&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;[&lt;/span&gt; -f &lt;span class="nv"&gt;$PID_FILE&lt;/span&gt; &lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="k"&gt;then&lt;/span&gt;
+        killproc -p &lt;span class="nv"&gt;$PID_FILE&lt;/span&gt; &lt;span class="nv"&gt;$NTOPD&lt;/span&gt;
+        &lt;span class="k"&gt;else&lt;/span&gt;
+        failure $&lt;span class="s2"&gt;&amp;quot;Stopping &lt;/span&gt;&lt;span class="nv"&gt;$prog&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;
+        &lt;span class="k"&gt;fi&lt;/span&gt;
+        &lt;span class="nv"&gt;RETVAL&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$?&lt;/span&gt;
+        &lt;span class="c1"&gt;# if we are in halt or reboot runlevel kill all running sessions&lt;/span&gt;
+        &lt;span class="c1"&gt;# so the TCP connections are closed cleanly&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="o"&gt;[&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;x&lt;/span&gt;&lt;span class="nv"&gt;$runlevel&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; x0 -o &lt;span class="s2"&gt;&amp;quot;x&lt;/span&gt;&lt;span class="nv"&gt;$runlevel&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; x6 &lt;span class="o"&gt;]&lt;/span&gt; &lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="k"&gt;then&lt;/span&gt;
+            &lt;span class="nb"&gt;trap&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;&amp;#39;&lt;/span&gt; TERM
+            killall &lt;span class="nv"&gt;$prog&lt;/span&gt; &lt;span class="m"&gt;2&lt;/span&gt;&lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt;/dev/null
+            &lt;span class="nb"&gt;trap&lt;/span&gt; TERM
+        &lt;span class="k"&gt;fi&lt;/span&gt;
+        &lt;span class="nb"&gt;echo&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+
+restart&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        stop
+        start
+&lt;span class="o"&gt;}&lt;/span&gt;
+
+rh_status&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        status -p &lt;span class="nv"&gt;$PID_FILE&lt;/span&gt; &lt;span class="nv"&gt;$prog&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+
+rh_status_q&lt;span class="o"&gt;()&lt;/span&gt; &lt;span class="o"&gt;{&lt;/span&gt;
+        rh_status &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt;/dev/null &lt;span class="m"&gt;2&lt;/span&gt;&lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&amp;amp;&lt;/span&gt;amp&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+
+&lt;span class="k"&gt;case&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nv"&gt;$1&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; in
+        start&lt;span class="o"&gt;)&lt;/span&gt;
+                rh_status &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;amp&lt;span class="p"&gt;;&amp;amp;&lt;/span&gt;amp&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="nb"&gt;exit&lt;/span&gt; &lt;span class="m"&gt;0&lt;/span&gt;
+                start
+                &lt;span class="p"&gt;;;&lt;/span&gt;
+        stop&lt;span class="o"&gt;)&lt;/span&gt;
+                &lt;span class="k"&gt;if&lt;/span&gt; ! rh_status_q&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="k"&gt;then&lt;/span&gt;
+                        &lt;span class="nb"&gt;exit&lt;/span&gt; &lt;span class="m"&gt;0&lt;/span&gt;
+                &lt;span class="k"&gt;fi&lt;/span&gt;
+                stop
+                &lt;span class="p"&gt;;;&lt;/span&gt;
+        restart&lt;span class="o"&gt;)&lt;/span&gt;
+                restart
+                &lt;span class="p"&gt;;;&lt;/span&gt;
+        status&lt;span class="o"&gt;)&lt;/span&gt;
+                rh_status
+                &lt;span class="nv"&gt;RETVAL&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$?&lt;/span&gt;
+                &lt;span class="p"&gt;;;&lt;/span&gt;
+        *&lt;span class="o"&gt;)&lt;/span&gt;
+                &lt;span class="nb"&gt;echo&lt;/span&gt; $&lt;span class="s2"&gt;&amp;quot;Usage: &lt;/span&gt;&lt;span class="nv"&gt;$0&lt;/span&gt;&lt;span class="s2"&gt; {start|stop|restart|status}&amp;quot;&lt;/span&gt;
+                &lt;span class="nv"&gt;RETVAL&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;2&lt;/span&gt;
+        &lt;span class="p"&gt;;;&lt;/span&gt;
+&lt;span class="k"&gt;esac&lt;/span&gt;
+&lt;span class="nb"&gt;exit&lt;/span&gt; &lt;span class="nv"&gt;$RETVAL&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;place the script in &lt;em&gt;/etc/init.d&lt;/em&gt; and make sure it has execute permissions.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo chmod &lt;span class="m"&gt;750&lt;/span&gt; /etc/init.d/ntop
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You may use &lt;em&gt;chkconfig&lt;/em&gt; to add the init script to autostart on certain run levels, The defaults for this script is on run level 2,3,4,5.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo chkconfig --add ntop
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The init script uses &lt;em&gt;/etc/ntop.conf&lt;/em&gt; as the default configuration file.
+Run ntop executable with --help to see more information about command line options. You could use the same options in the configuration file.&lt;/p&gt;
+</content><category term="linux"></category></entry><entry><title>Courier IMAP error: filesystem notification initialization</title><link href="/courier-mail-fam-gamin/" rel="alternate"></link><published>2012-06-15T00:00:00+00:00</published><updated>2014-01-10T06:17:40+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2012-06-15:/courier-mail-fam-gamin/</id><summary type="html">&lt;p&gt;After configuring a Courier mail server on a Debain squeeze server, I got this error on my mail client:&lt;/p&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;Filesystem notification initialization error — contact your mail administrator (check for configuration errors with the FAM/Gamin library)&lt;/tt&gt;&lt;/p&gt;
+&lt;p&gt;The problem is related to &lt;a class="reference external" href="http://packages.debian.org/squeeze/libfam0"&gt;libfam0&lt;/a&gt;. &lt;a class="reference external" href="http://en.wikipedia.org/wiki/File_Alteration_Monitor"&gt;FAM&lt;/a&gt; is a service for system processes
+that …&lt;/p&gt;</summary><content type="html">&lt;p&gt;After configuring a Courier mail server on a Debain squeeze server, I got this error on my mail client:&lt;/p&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;Filesystem notification initialization error — contact your mail administrator (check for configuration errors with the FAM/Gamin library)&lt;/tt&gt;&lt;/p&gt;
+&lt;p&gt;The problem is related to &lt;a class="reference external" href="http://packages.debian.org/squeeze/libfam0"&gt;libfam0&lt;/a&gt;. &lt;a class="reference external" href="http://en.wikipedia.org/wiki/File_Alteration_Monitor"&gt;FAM&lt;/a&gt; is a service for system processes
+that need to watch file system alternations. Courier uses this library to update IMAP clients on folder status updates.&lt;/p&gt;
+&lt;p&gt;There are other solutions to provide file system modification alerting, including kernel specific systems like inotify or Kqueue, or portable libraries like FAM or Gamin.&lt;/p&gt;
+&lt;p&gt;Gamin is newer and an active project that provides the same API as FAM so is binary and source compatible with FAM with
+some &lt;a class="reference external" href="http://people.gnome.org/~veillard/gamin/differences.html"&gt;differences&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Default Courier installation on squeeze uses libfam0, provided by the &lt;a class="reference external" href="http://packages.debian.org/squeeze/fam"&gt;fam package&lt;/a&gt;.
+Since Gamin provides the same functionality Courier requires from libfam0, it is better to use &lt;a class="reference external" href="https://wiki.archlinux.org/index.php/FAM"&gt;Gamin instead of FAM&lt;/a&gt;.
+The Gamin package would remove fam package and install its own implementation of libfam0, fixing the error reported on the client side.&lt;/p&gt;
+&lt;p&gt;To install Gamin, open a terminal and enter:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo apt-get install gamin
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This installation recommends removing fam and libfam0, accept the solution. Then restart courier-imap and courier-imap-ssl services:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo /etc/init.d/courier-imap restart
+sudo /etc/init.d/courier-imap-ssl restart
+&lt;/pre&gt;&lt;/div&gt;
+</content><category term="linux"></category><category term="mail"></category></entry><entry><title>Malware advertised as a networking utility on behalf of ISPs</title><link href="/malware-advertised-as-networking-utility-for-isps/" rel="alternate"></link><published>2012-06-09T00:00:00+00:00</published><updated>2014-01-10T11:17:36+00:00</updated><author><name>Farzad Ghanei</name></author><id>tag:None,2012-06-09:/malware-advertised-as-networking-utility-for-isps/</id><summary type="html">&lt;p&gt;Recently I received reports regarding an email advertising a network utility developed by &lt;a class="reference external" href="http://www.parsonline.com/en/"&gt;ParsOnline&lt;/a&gt; to help the customers monitor their accounts and usage.
+The email had a link to ZIP file on a file sharing web site.
+I downloaded the file and inspected its contents. It was a malware that …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Recently I received reports regarding an email advertising a network utility developed by &lt;a class="reference external" href="http://www.parsonline.com/en/"&gt;ParsOnline&lt;/a&gt; to help the customers monitor their accounts and usage.
+The email had a link to ZIP file on a file sharing web site.
+I downloaded the file and inspected its contents. It was a malware that installed a keylogger on the victim's machine.
+The keylogger would capture every keystroke of the user and took screenshots of the desktop every often, then send them to a gmail account.&lt;/p&gt;
+&lt;p&gt;The ZIP file contained 2 files:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;network.exe: the promised utility that the user would want to use. But when the user tries to extract the file, it requires a password. so ...&lt;/li&gt;
+&lt;li&gt;Password.exe: appears as a password generator tool, and the user is really wondering how to get a password to extract &lt;em&gt;network.exe&lt;/em&gt;. It would be obvious to extract this file and execute it. And that's how the malware executes.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;By running &lt;em&gt;Password.exe&lt;/em&gt; a window appears displaying a simple message:&lt;/p&gt;
+&lt;blockquote&gt;
+www.parsonline.com&lt;/blockquote&gt;
+&lt;p&gt;But this is just the interface. At the same time the keylogger is installed on the user machine. It creates the &lt;strong&gt;1053&lt;/strong&gt; directory in &lt;em&gt;WindowsSystem32&lt;/em&gt; path. The directory contains 2 malware files, &lt;em&gt;svchovt.exe&lt;/em&gt; and &lt;em&gt;vlt.bat&lt;/em&gt;.
+It also modifies Windows registry to make sure the malmware could perform as intended.&lt;/p&gt;
+&lt;p&gt;The &lt;em&gt;svchovt.exe&lt;/em&gt; file is the keylogger program, as I inspected more it was probably developed by Visual Basic 6.
+It registers itself as a listener on user keystrokes, and takes a screenshot of the user desktop every often and stores the screenshot in user temporary files path.
+Its name is selected to be close to the &lt;em&gt;svchost.exe&lt;/em&gt; which is a legitimate Windows process&lt;/p&gt;
+&lt;p&gt;Windows registry subkey &lt;em&gt;SOUNDMAN&lt;/em&gt; is created in &lt;em&gt;HKEY_LOCAL_MACHINESOFTWAREMicrosoftWindowsCurrentVersionRun&lt;/em&gt; and points to the path that the &lt;em&gt;svchovt.exe&lt;/em&gt; file resides on disk.
+This is to make sure the keylogger is executed on each user login session.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.cloudantivirus.com/"&gt;Panda&lt;/a&gt; cloud antivirus scanned the file and found no harm but &lt;a class="reference external" href="http://www.kaspersky.com/virusscanner"&gt;Kaspersky&lt;/a&gt; free online scanner detected the malware.
+Reports from Kaspersky contained a screenshot of the malware window, but instead of ParsOnline, it was displaying &amp;quot;www.shatel.ir&amp;quot;.
+So as it appears the malware was targeting other ISPs too.&lt;/p&gt;
+&lt;p&gt;To remove the malware manually, you could simply end the &lt;strong&gt;svchovt.exe&lt;/strong&gt; process from the Windows task manager and then remove the malware files from &lt;strong&gt;WindowsSystem321053&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;The malware is removed and can not run anymore, so the system is clean.
+In the end you could remove the &lt;em&gt;SOUNDMAN&lt;/em&gt; subkey in Windows registry, but that's not essential.&lt;/p&gt;
+</content><category term="security"></category><category term="parsonline"></category></entry></feed>
