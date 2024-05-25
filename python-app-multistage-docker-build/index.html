@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Building a Python Application Docker Image with Multi-Stage Builds - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="/python-app-multistage-docker-build/">
+
+        <meta name="author" content="Farzad Ghanei" />
+        <meta name="keywords" content="python,docker" />
+        <meta name="description" content="This article describes how to build a Python application Docker image, optimized for production use, using multi-stage builds. The idea is to use a separate build stage to build the dependencies (where the build process itself may require other dependencies, like build tools, compilers, header files, etc.), then copy the …" />
+
+        <meta property="og:site_name" content="Farzad Ghanei" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Building a Python Application Docker Image with Multi-Stage Builds"/>
+        <meta property="og:url" content="/python-app-multistage-docker-build/"/>
+        <meta property="og:description" content="This article describes how to build a Python application Docker image, optimized for production use, using multi-stage builds. The idea is to use a separate build stage to build the dependencies (where the build process itself may require other dependencies, like build tools, compilers, header files, etc.), then copy the …"/>
+        <meta property="article:published_time" content="2023-11-04" />
+            <meta property="article:section" content="misc" />
+            <meta property="article:tag" content="python" />
+            <meta property="article:tag" content="docker" />
+            <meta property="article:author" content="Farzad Ghanei" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="/python-app-multistage-docker-build/"
+                       rel="bookmark"
+                       title="Permalink to Building a Python Application Docker Image with Multi-Stage Builds">
+                        Building a Python Application Docker Image with Multi-Stage Builds
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2023-11-04T18:04:01+00:00"> Sat 04 November 2023</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/python.html">python</a>
+        /
+	<a href="/tag/docker.html">docker</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <p>This article describes how to build a Python application Docker image, optimized for production use, using multi-stage builds.</p>
+<p>The idea is to use a separate build stage to build the dependencies (where the build process itself may require other
+dependencies, like build tools, compilers, header files, etc.), then copy the exact required artifacts (built dependencies) to the
+final stage, which can then be used to run the application.</p>
+<p>The final image will only contain the application runtime dependencies, and not the build requirements.
+A smaller image with less software packages, means faster deployments, less storage space, and smaller attack surface.</p>
+<p>Dependencies of a Python application can be categorized as:</p>
+<ul class="simple">
+<li>Base dependencies: required to bootstrap/setup the application, or used by helper scripts for initialization, etc. These dependencies are not directly used by the application, but needed in all stages.
+The application dependency manager itself (like <a class="reference external" href="https://python-poetry.org/">poetry</a>, <a class="reference external" href="https://pipenv.pypa.io/en/latest/">pipenv</a>, etc.) is also a base dependency.</li>
+<li>Application dependencies: required to run the app itself, like frameworks, database drivers, etc.</li>
+<li>Development dependencies: required during the test or development phase, like test runners, static checkers and linters, document generation tools, etc.</li>
+</ul>
+<p>In this article <a class="reference external" href="https://python-poetry.org/">poetry</a> is used as the dependency manager, but the same approach can be used with other dependency managers as well.
+Also as another base dependency <a class="reference external" href="https://www.psycopg.org/">psycopg2</a> is used (let's assume it's required by initialization scripts,
+to check for database port availability before starting the application), with both runtime and buildtime native dependencies, to demonstrate
+the approach for such libraries.</p>
+<p>The application dependencies are defined in the <a class="reference external" href="https://python-poetry.org/docs/pyproject/">pyproject.toml</a> file, and the development dependencies
+are defined in the <cite>dev</cite> dependency <a class="reference external" href="https://python-poetry.org/docs/master/managing-dependencies/#dependency-groups">group</a>.
+The production build will only contains the application dependencies, and the development build will contain both application and development dependencies.</p>
+<div class="section" id="image-build-stages">
+<h2>Image Build Stages</h2>
+<p>The build stages should be defained in away to provide this functionality:</p>
+<ul class="simple">
+<li>Build requirements won't be included in the final image</li>
+<li>Production build won't include development dependencies</li>
+</ul>
+<p>There maybe different approaches to define the image build stages, for example:</p>
+<ul class="simple">
+<li>Define one stage for build and one for runtime. Simple and straightforward, however the issue of
+separating the production and development dependencies still remains. One solution is to use <a class="reference external" href="https://docs.docker.com/build/guide/build-args/">build arguments</a> to
+pass the dependency manager options to install the desired dependencies based on the build target. When building the production image, only application dependencies
+are built, and when building the development image, development dependencies are installed as well.</li>
+<li>Define more complicated stages to build and run the application for production and development environments. One approach could be to add extra build stages, where
+the first stage builds the application dependencies, the second stage is used to run application in production, and the last stage installs the development dependencies.
+Then different stages are used as <a class="reference external" href="https://docs.docker.com/engine/reference/commandline/build/#target">build targets</a> for different environments.
+The development stage may still require and include build dependencies (unless this issue is addressed explicitly).</li>
+</ul>
+<p>Different approaches have different trade-offs, and the best approach depends on the use case.
+Using more specific stages may help to utilize the build cache more efficiently (or may not, depending on the build pipeline setup, etc.),
+but it may also make the Dockerfile more complicated.</p>
+<p>Regardless of such details, in most cases reducing the final image size provides the most benefit, which can be achieved by both approaches.
+In this article the first approach is introduced, using build arguments to pass the dependency manager options to install the desired
+dependencies for the build target.</p>
+<p>The Dockerfile layout is as follows:</p>
+<ul class="simple">
+<li>Base stage: defines the base image for other stages, pinning the python version and venv/app paths</li>
+<li>Build stage: installs all build dependencies, builds the application dependencies for the target environment, and installs them in a virtualenv</li>
+<li>Run stage: Sets the application itself up to use the ready virtualenv (pre-built during the build stage)</li>
+</ul>
+<p>Build arguments allow customizing the build, for example the base Python version, the virtualenv path, etc, but also
+the dependency manager options to install the desired dependencies for the build target (production or development).</p>
+<div class="highlight"><pre><span></span><span class="c"># Define build args (used for all stages) here</span>
+<span class="c"># These args can be overridden during build by --build-args NAME=VAL</span>
+<span class="c"># see: https://docs.docker.com/engine/reference/builder/#arg</span>
+
+<span class="k">ARG</span><span class="w"> </span><span class="nv">PYTHON_VERSION</span><span class="o">=</span><span class="m">3</span>.11-bookworm
+
+<span class="c"># pin base dependency versions to build the base image</span>
+<span class="c"># poetry as the base dependency</span>
+<span class="k">ARG</span><span class="w"> </span><span class="nv">POETRY_VERSION</span><span class="o">=</span><span class="m">1</span>.6.1
+<span class="c"># psycopg2 as a package with native dependencies and needed outside of the virtualenv for various reasons</span>
+<span class="k">ARG</span><span class="w"> </span><span class="nv">PSYCOPG2_VERSION</span><span class="o">=</span><span class="m">2</span>.9.8
+
+<span class="c"># PYTHON_WHEEL_PATH is used to store the built wheels</span>
+<span class="k">ARG</span><span class="w"> </span><span class="nv">PYTHON_WHEEL_PATH</span><span class="o">=</span>/var/cache/python/wheels
+
+<span class="c"># use a common path for all poetry data and virtualenvs to share them between stages</span>
+<span class="k">ARG</span><span class="w"> </span><span class="nv">POETRY_DATA_DIR</span><span class="o">=</span>/usr/local/poetry/data
+<span class="c"># poetry stores the virtualenvs by default under the cache path, maybe it&#39;s better to keep all poetry data in one place</span>
+<span class="k">ARG</span><span class="w"> </span><span class="nv">POETRY_CACHE_DIR</span><span class="o">=</span>/usr/local/poetry/cache
+
+<span class="c"># set POETRY_INSTALL_OPTS=&#39;--no-root --with dev&#39; to build with dev dependencies</span>
+<span class="k">ARG</span><span class="w"> </span><span class="nv">POETRY_INSTALL_OPTS</span><span class="o">=</span><span class="s1">&#39;--no-root&#39;</span><span class="w">  </span>#<span class="w"> </span>not<span class="w"> </span>installing<span class="w"> </span>the<span class="w"> </span>app<span class="w"> </span>itself<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>venv<span class="w"> </span>to<span class="w"> </span>keep<span class="w"> </span>venv<span class="w"> </span>and<span class="w"> </span>app<span class="w"> </span><span class="k">in</span><span class="w"> </span>separate<span class="w"> </span>paths
+
+<span class="c">################################################################################</span>
+<span class="c"># Base stage</span>
+<span class="c">################################################################################</span>
+<span class="c"># base stage defines the base for other stages, to set defaults and define build args</span>
+
+<span class="k">FROM</span><span class="w"> </span><span class="s">python:${PYTHON_VERSION}</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s">base-python</span>
+
+<span class="k">ARG</span><span class="w"> </span>PYTHON_WHEEL_PATH
+
+<span class="k">ARG</span><span class="w"> </span>POETRY_VERSION
+<span class="k">ENV</span><span class="w"> </span><span class="nv">POETRY_VERSION</span><span class="o">=</span><span class="si">${</span><span class="nv">POETRY_VERSION</span><span class="si">}</span>
+
+<span class="k">ARG</span><span class="w"> </span>PSYCOPG2_VERSION
+<span class="k">ENV</span><span class="w"> </span><span class="nv">PSYCOPG2_VERSION</span><span class="o">=</span><span class="si">${</span><span class="nv">PSYCOPG2_VERSION</span><span class="si">}</span>
+
+<span class="k">ARG</span><span class="w"> </span>POETRY_DATA_DIR
+<span class="k">ENV</span><span class="w"> </span><span class="nv">POETRY_DATA_DIR</span><span class="o">=</span><span class="si">${</span><span class="nv">POETRY_DATA_DIR</span><span class="si">}</span>
+<span class="k">ARG</span><span class="w"> </span>POETRY_CACHE_DIR
+<span class="k">ENV</span><span class="w"> </span><span class="nv">POETRY_CACHE_DIR</span><span class="o">=</span><span class="si">${</span><span class="nv">POETRY_CACHE_DIR</span><span class="si">}</span>
+
+<span class="k">ENV</span><span class="w"> </span><span class="nv">APP_PATH</span><span class="o">=</span>/opt/myapp
+<span class="k">WORKDIR</span><span class="w"> </span><span class="s">${APP_PATH}</span>
+
+<span class="k">RUN</span><span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">POETRY_DATA_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">POETRY_CACHE_DIR</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="si">${</span><span class="nv">APP_PATH</span><span class="si">}</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># Build stage</span>
+<span class="c">################################################################################</span>
+
+<span class="k">FROM</span><span class="w"> </span><span class="s">base-python</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s">app-build-stage</span>
+
+<span class="c"># install all build dependencies to build wheels</span>
+<span class="k">RUN</span><span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>--no-install-recommends<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>build-essential<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>libpq-dev<span class="w">  </span>#<span class="w"> </span>libq-dev<span class="w"> </span>is<span class="w"> </span>needed<span class="w"> </span>to<span class="w"> </span>build<span class="w"> </span>psycopg2
+
+<span class="c"># explicitly download base dependencies (poetry, etc.) wheels, then install them</span>
+<span class="c"># keep the wheels so they&#39;re available for the next stage</span>
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>wheel<span class="w"> </span>--wheel-dir<span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span><span class="w"> </span><span class="nv">poetry</span><span class="o">==</span><span class="si">${</span><span class="nv">POETRY_VERSION</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>wheel<span class="w"> </span>--wheel-dir<span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span><span class="w"> </span><span class="nv">psycopg2</span><span class="o">==</span><span class="si">${</span><span class="nv">PSYCOPG2_VERSION</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>--no-index<span class="w"> </span>--find-links<span class="o">=</span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span>/poetry*<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>--no-index<span class="w"> </span>--find-links<span class="o">=</span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span>/psycopg2*
+
+<span class="c"># copy application dependency specs</span>
+<span class="k">COPY</span><span class="w"> </span>pyproject.toml<span class="w"> </span>poetry.lock<span class="w"> </span><span class="si">${</span><span class="nv">APP_PATH</span><span class="si">}</span>/
+
+<span class="c"># build and install the application dependencies in a virtualenv</span>
+<span class="c"># cleanup cached files as build is done, since these paths are copied into the next stage.</span>
+<span class="c"># no fail on cleanup.</span>
+<span class="k">RUN</span><span class="w"> </span>poetry<span class="w"> </span>install<span class="w"> </span><span class="si">${</span><span class="nv">POETRY_INSTALL_OPTS</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span>poetry<span class="w"> </span>cache<span class="w"> </span>clear<span class="w"> </span>--all<span class="w"> </span>--no-interaction<span class="w"> </span>PyPI<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span><span class="o">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">(</span>poetry<span class="w"> </span>cache<span class="w"> </span>clear<span class="w"> </span>--all<span class="w"> </span>--no-interaction<span class="w"> </span>_default_cache<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span><span class="o">)</span>
+
+<span class="c">################################################################################</span>
+<span class="c"># Run stage</span>
+<span class="c">################################################################################</span>
+
+<span class="k">FROM</span><span class="w"> </span><span class="s">base-python</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s">app-run-stage</span>
+
+<span class="c"># install required runtime dependencies, and cleanup cached files for a smaller layer</span>
+<span class="k">RUN</span><span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>--no-install-recommends<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>#<span class="w"> </span>psycopg2<span class="w"> </span>runtime<span class="w"> </span>dependencies
+<span class="w">        </span>libpq5<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>#<span class="w"> </span>cleaning<span class="w"> </span>up<span class="w"> </span>unused<span class="w"> </span>files
+<span class="w">  </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>purge<span class="w"> </span>-y<span class="w"> </span>--auto-remove<span class="w"> </span>-o<span class="w"> </span>APT::AutoRemove::RecommendsImportant<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/apt/lists/*
+
+<span class="c"># copy all base dependency wheel files from build stage, then install them</span>
+<span class="k">COPY</span><span class="w"> </span>--from<span class="o">=</span>app-build-stage<span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span>
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>--no-index<span class="w"> </span>--find-links<span class="o">=</span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span>/poetry*<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>--no-index<span class="w"> </span>--find-links<span class="o">=</span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span>/psycopg2*<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span><span class="si">${</span><span class="nv">PYTHON_WHEEL_PATH</span><span class="si">}</span>
+
+<span class="c"># now copy the application dependencies (pre-built virutalenv)</span>
+<span class="k">COPY</span><span class="w"> </span>pyproject.toml<span class="w"> </span>poetry.lock<span class="w"> </span><span class="si">${</span><span class="nv">APP_PATH</span><span class="si">}</span>/
+<span class="k">COPY</span><span class="w"> </span>--from<span class="o">=</span>app-build-stage<span class="w"> </span><span class="si">${</span><span class="nv">POETRY_DATA_DIR</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">POETRY_DATA_DIR</span><span class="si">}</span>
+<span class="k">COPY</span><span class="w"> </span>--from<span class="o">=</span>app-build-stage<span class="w"> </span><span class="si">${</span><span class="nv">POETRY_CACHE_DIR</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">POETRY_CACHE_DIR</span><span class="si">}</span>
+
+<span class="c"># now the copy application code itself, which may change more often than dependencies</span>
+<span class="k">COPY</span><span class="w"> </span>.<span class="w"> </span>.
+</pre></div>
+<p>Using this setup we can build the app image for production (using default build args and dependencies):</p>
+<div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>--target<span class="w"> </span>app-run-stage<span class="w"> </span>-t<span class="w"> </span>myapp<span class="w"> </span>.
+</pre></div>
+<p>And for development, using:</p>
+<div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>--target<span class="w"> </span>app-run-stage<span class="w"> </span>--build-arg<span class="w"> </span><span class="nv">POETRY_INSTALL_OPTS</span><span class="o">=</span><span class="s1">&#39;--no-root --with dev&#39;</span><span class="w"> </span>-t<span class="w"> </span>myapp-dev<span class="w"> </span>.
+</pre></div>
+<p>Or using docker-compose, the production file (not a complete example):</p>
+<div class="highlight"><pre><span></span><span class="nn">---</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">myapp</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">build</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">context</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.</span>
+<span class="w">      </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app-run-stage</span>
+<span class="w">      </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">POETRY_INSTALL_OPTS</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;--no-root&#39;</span><span class="w">  </span><span class="c1"># install main dependencies only in production build</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myapp</span>
+<span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+</pre></div>
+<p>And the development override file:</p>
+<div class="highlight"><pre><span></span><span class="nn">---</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">myapp</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">build</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">context</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.</span>
+<span class="w">      </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app-run-stage</span>
+<span class="w">      </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">POETRY_INSTALL_OPTS</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;--no-root</span><span class="nv"> </span><span class="s">--with</span><span class="nv"> </span><span class="s">dev&#39;</span><span class="w">  </span><span class="c1"># install dev dependencies during test/devel build</span>
+<span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myapp-dev</span>
+</pre></div>
+</div>
+
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

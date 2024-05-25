@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>misc - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+
+    <meta name="author" content="Farzad Ghanei" />
+    <meta name="keywords" content="misc" />
+
+    <!-- Open Graph tags -->
+        <meta property="og:site_name" content="Farzad Ghanei" />
+        <meta property="og:type" content="website"/>
+        <meta property="og:title" content="Farzad Ghanei"/>
+        <meta property="og:url" content=""/>
+        <meta property="og:description" content="Farzad Ghanei"/>
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+            <article>
+                <h2><a href="/python-app-multistage-docker-build/">Building a Python Application Docker Image with Multi-Stage Builds</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2023-11-04T18:04:01+00:00"> Sat 04 November 2023</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/python.html">python</a>
+        /
+	<a href="/tag/docker.html">docker</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>This article describes how to build a Python application Docker image, optimized for production use, using multi-stage builds.</p>
+<p>The idea is to use a separate build stage to build the dependencies (where the build process itself may require other
+dependencies, like build tools, compilers, header files, etc.), then copy the …</p>
+                    <a class="btn btn-default btn-xs" href="/python-app-multistage-docker-build/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/django-migrations-on-kubernetes/">Django Migrations on Kubernetes</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2023-01-29T11:45:49+00:00"> Sun 29 January 2023</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/python.html">python</a>
+        /
+	<a href="/tag/django.html">django</a>
+        /
+	<a href="/tag/kubernetes.html">kubernetes</a>
+        /
+	<a href="/tag/postgresql.html">postgresql</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>Concurrent setups are helpful for scalability and performance, but may bring complexities for consistency.
+Not all tasks benefit from concurrency though. For example running database migrations
+is a task where consistency and controlled execution is more important than concurrent execution, if that's desired at all.</p>
+<p>In a distributed setup, how …</p>
+                    <a class="btn btn-default btn-xs" href="/django-migrations-on-kubernetes/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/python-context-managers/">Python Context Managers</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2018-07-29T13:12:30+00:00"> Sun 29 July 2018</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/python.html">python</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>Sometimes it's helpful to wrap some code in a given context. Either
+the code requires some resource from the context, or the context adds some aspect to
+the code.</p>
+<p>Python provides <a class="reference external" href="https://docs.python.org/3/reference/compound_stmts.html#with">with statement</a> to create
+a context for the followed block of code.</p>
+<div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">context_manager</span><span class="p">:</span>
+    <span class="c1"># this block runs within the …</span></pre></div>
+                    <a class="btn btn-default btn-xs" href="/python-context-managers/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/linux-home-on-encrypted-partition/">Linux Home On Encrypted Partition</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2017-12-09T17:47:30+00:00"> Sat 09 December 2017</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/linux.html">linux</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>Goal: Mount an encrypted partition on a secondary disk to <cite>/home</cite>.</p>
+<p>I needed more space for user files on my Linux desktop running on an SSD,
+so I wanted to use a second rotating disk to store user files.
+I also wanted to <a class="reference external" href="https://wiki.archlinux.org/index.php/Disk_encryption#Why_use_encryption.3F">encrypt this disk</a>.</p>
+<div class="section" id="procedure">
+<h2>Procedure</h2>
+<ol class="arabic simple">
+<li>Create the encrypted …</li></ol></div>
+                    <a class="btn btn-default btn-xs" href="/linux-home-on-encrypted-partition/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/python-methods-as-decorators/">Python Methods As Decorators</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2016-11-13T12:29:49+00:00"> Sun 13 November 2016</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/python.html">python</a>
+        /
+	<a href="/tag/decorators.html">decorators</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>Python function decorators (<a class="reference external" href="https://www.python.org/dev/peps/pep-0318/">PEP 318</a>)
+make it easy to modify behavior of functions (or add new functionality),
+without changing them. We won't introduce them here as they're <a class="reference external" href="https://wiki.python.org/moin/PythonDecorators">documented</a>
+extensively.</p>
+<p>We're demonstrating a specific case, where we have a class and we want to
+to use one of the methods of …</p>
+                    <a class="btn btn-default btn-xs" href="/python-methods-as-decorators/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/skipping-tests/">Skipping Tests</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2016-10-01T10:15:49+00:00"> Sat 01 October 2016</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/php.html">php</a>
+        /
+	<a href="/tag/python.html">python</a>
+        /
+	<a href="/tag/tests.html">tests</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>Sometimes a test should be skipped for a good reason (some resource is not available
+for a while and mocking is not an option, or tests are assumed to be
+impacting each other, etc.).</p>
+<p>Most test runners support a way to mark a test to be skipped in a proper …</p>
+                    <a class="btn btn-default btn-xs" href="/skipping-tests/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/mixed-ddl-dml-in-doctrine-migrations/">Mixed DDL and DML SQL Commands in Doctrine Migrations</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2015-10-15T11:25:49+00:00"> Thu 15 October 2015</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/php.html">php</a>
+        /
+	<a href="/tag/doctrine.html">doctrine</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>Doctrine is a useful library when working on a heavy DB dependent application
+in PHP/HackLang. It provides migrations as a tool to ease the process of applying
+changes to the database.</p>
+<p>Each migration version is a class (often extends an abstract migration
+class provided by Doctrine), which specifies the …</p>
+                    <a class="btn btn-default btn-xs" href="/mixed-ddl-dml-in-doctrine-migrations/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/python-virtual-environments/">Python Virtual Environments</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2015-10-05T21:46:49+00:00"> Mon 05 October 2015</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/python.html">python</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>Problem: Different applications might require different versions of the same libraries, which version of those libraries should be installed?</p>
+<p>Problem: There are tools installed with the operation system written in Python, they require specific versions of some libraries, and the ones provided by
+the operating system packages are to satisfy …</p>
+                    <a class="btn btn-default btn-xs" href="/python-virtual-environments/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/programming/">Programming</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2014-07-24T14:17:49+00:00"> Thu 24 July 2014</time>
+    </span>
+
+
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>Programming is a creative and challenging process, and this makes it interesting.
+There is so much to learn and there is so much to do. But this is common to get lost in this ocean and forget what was the original destination.
+Software programs exist to solve problems and empower …</p>
+                    <a class="btn btn-default btn-xs" href="/programming/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="/mini-pycon-my-2014/">Mini PyCon MY 2014</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2014-04-13T03:07:05+00:00"> Sun 13 April 2014</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/slides.html">slides</a>
+        /
+	<a href="/tag/python.html">python</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>We had a great time at Mini PyCon MY this March.
+<a class="reference external" href="https://speakerdeck.com/farzadghanei/concurrency-in-python">Here</a> are the slides from my talk about concurrency in Python.</p>
+
+                    <a class="btn btn-default btn-xs" href="/mini-pycon-my-2014/">more ...</a>
+                </div>
+            </article>
+            <hr/>
+
+        <ul class="pagination">
+                <li class="prev disabled"><a href="#">&laquo;</a></li>
+                    <li class="active"><a
+                            href="/category/misc.html">1</a></li>
+                    <li class=""><a
+                            href="/category/misc2.html">2</a></li>
+                <li class="next"><a
+                        href="/category/misc2.html">&raquo;</a></li>
+        </ul>
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

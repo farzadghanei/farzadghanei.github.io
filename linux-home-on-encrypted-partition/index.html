@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Linux Home On Encrypted Partition - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="/linux-home-on-encrypted-partition/">
+
+        <meta name="author" content="Farzad Ghanei" />
+        <meta name="keywords" content="linux" />
+        <meta name="description" content="Goal: Mount an encrypted partition on a secondary disk to /home. I needed more space for user files on my Linux desktop running on an SSD, so I wanted to use a second rotating disk to store user files. I also wanted to encrypt this disk. Procedure Create the encrypted …" />
+
+        <meta property="og:site_name" content="Farzad Ghanei" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Linux Home On Encrypted Partition"/>
+        <meta property="og:url" content="/linux-home-on-encrypted-partition/"/>
+        <meta property="og:description" content="Goal: Mount an encrypted partition on a secondary disk to /home. I needed more space for user files on my Linux desktop running on an SSD, so I wanted to use a second rotating disk to store user files. I also wanted to encrypt this disk. Procedure Create the encrypted …"/>
+        <meta property="article:published_time" content="2017-12-09" />
+            <meta property="article:section" content="misc" />
+            <meta property="article:tag" content="linux" />
+            <meta property="article:author" content="Farzad Ghanei" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="/linux-home-on-encrypted-partition/"
+                       rel="bookmark"
+                       title="Permalink to Linux Home On Encrypted Partition">
+                        Linux Home On Encrypted Partition
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2017-12-09T17:47:30+00:00"> Sat 09 December 2017</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/linux.html">linux</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <p>Goal: Mount an encrypted partition on a secondary disk to <cite>/home</cite>.</p>
+<p>I needed more space for user files on my Linux desktop running on an SSD,
+so I wanted to use a second rotating disk to store user files.
+I also wanted to <a class="reference external" href="https://wiki.archlinux.org/index.php/Disk_encryption#Why_use_encryption.3F">encrypt this disk</a>.</p>
+<div class="section" id="procedure">
+<h2>Procedure</h2>
+<ol class="arabic simple">
+<li>Create the encrypted partition and file system on the new rotating disk</li>
+<li>Configure the system to unlock the encrypted partition during boot</li>
+<li>Mount the partition to <cite>/home</cite></li>
+</ol>
+<p>We want to create an encrypted partition on the rotating disk.
+This command helps to make sure we're picking the right disk. The ROTA
+field specifies if the device is a rotating disk.</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>lsblk<span class="w"> </span>-o<span class="w"> </span>NAME,UUID,TYPE,ROTA,FSTYPE,MOUNTPOINT
+</pre></div>
+<p>Let's say <cite>sdb</cite> is the SSD where the OS is installed, and <cite>sda</cite> is the rotating
+disk that we want to use.</p>
+<div class="section" id="create-a-new-partition">
+<h3>Create a new partition</h3>
+<p>Create a partition table and a partition.
+If there is already a partition available on the disk to use for this setup,
+we can skip this step.</p>
+<p>I'm assuming it's a brand new disk, and we're going to create only one
+partition using <cite>fdisk</cite>. Other partitioning schemes and tools may be used.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Creating a new partition table on a disk with existing data,
+will erase all the data. If there is existing data or partitions
+on the disk, make sure to backup the data or follow a more specific guide
+to create the target partition.</p>
+</div>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>fdisk<span class="w"> </span>/dev/sda<span class="w">  </span><span class="c1"># sda is the new rotating disk</span>
+<span class="w">  </span><span class="c1"># on the fdisk interactive prompt:</span>
+<span class="w">  </span><span class="c1">#   to create a new partition table, press &quot;o&quot;</span>
+<span class="w">  </span><span class="c1">#   to create new primary partition press &quot;n&quot; and then &quot;p&quot;</span>
+<span class="w">  </span><span class="c1">#   we&#39;re using the whole disk for this partition so the default size is fine</span>
+<span class="w">  </span><span class="c1">#   to write changes to disk, press &quot;w&quot;</span>
+</pre></div>
+<p>Now <cite>/dev/sda1</cite> is our target partition.</p>
+</div>
+<div class="section" id="setup-the-encrypted-device">
+<h3>Setup the encrypted device</h3>
+<p>We're setting up <a class="reference external" href="https://wiki.archlinux.org/index.php/Dm-crypt">dm-crypt</a>
+encrypted partition in LUKS mode.
+First we need to make sure proper packages are installed and <cite>dm_crypt</cite> kernel
+module is loaded.</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>cryptsetup
+$<span class="w"> </span>lsmod<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>dm_crypt
+$<span class="w"> </span><span class="c1"># if dm_crypt was not loaded, load the module</span>
+$<span class="w"> </span>sudo<span class="w"> </span>modprobe<span class="w"> </span>dm_crypt
+</pre></div>
+<div class="section" id="create-encrypted-block-device">
+<h4>Create encrypted block device</h4>
+<p>We'll use <cite>cryptsetup</cite> tool to setup <cite>dm-crypt</cite> managed mappings. I'm going
+to use default parameters, but
+<a class="reference external" href="https://wiki.archlinux.org/index.php/Dm-crypt/Device_encryption#Encryption_options_for_LUKS_mode">other parameters</a>
+may be used to customize the encryption setup (cipher, key size, etc.).</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>cryptsetup<span class="w"> </span>-v<span class="w"> </span>luksFromat<span class="w"> </span>/dev/sda1
+$<span class="w"> </span><span class="c1"># enter the encryption passphrase</span>
+</pre></div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The encryption passphrase will be required to access the data.
+If the passphrase is forgotten, it won't be possible to access the files on this partition,
+nor the meta data.</p>
+</div>
+<p>Now <cite>/dev/sda1</cite> is an encrypted block device. Let's see the LUKS headers:</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>cryptsetup<span class="w"> </span>luksDump<span class="w"> </span>/dev/sda1
+</pre></div>
+</div>
+<div class="section" id="create-the-file-system">
+<h4>Create the file system</h4>
+<p>The encrypted device should be unlocked to be accessed.
+Device mapper provides a new device which is mapped to the LUKS encrypted
+device. I'm going to name the mapped device <cite>sda1_crypt</cite> but it can be any
+valid name.</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>cryptsetup<span class="w"> </span>luksOpen<span class="w"> </span>/dev/sda1<span class="w"> </span>sda1_crypt
+$<span class="w"> </span><span class="c1"># or using a recent version of cryptesetup:</span>
+<span class="w">  </span><span class="c1"># sudo cryptsetup open --type luks /dev/sda1 sda1_crypt</span>
+</pre></div>
+<p>We'll be prompted for the encryption passphrase.
+A new block device is created in <cite>/dev/mapper</cite> named <cite>sda1_crypt</cite> with a new UUID.
+This is a block device and the rest of the operations (creating a file system, mounting)
+should use this device instead of directly working on <cite>/dev/sda1</cite>.
+Later we'll mount this device to <cite>/home</cite>.</p>
+<p>No we can format the unlocked device with the desired file system.
+I'm using <cite>ext4</cite> here, but any file system or formatting tool may be used.</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>mkfs.ext4<span class="w"> </span>/dev/mapper/sda1_crypt
+</pre></div>
+<p>Let's see our block device setup by far on this disk</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>lsblk<span class="w"> </span>-o<span class="w"> </span>NAME,UUID,TYPE,FSTYPE,MOUNTPOINT<span class="w"> </span>/dev/sda
+NAME<span class="w">                     </span>UUID<span class="w">                                   </span>TYPE<span class="w">  </span>FSTYPE<span class="w">      </span>MOUNTPOINT
+sda<span class="w">                                                             </span>disk
+└─sda1<span class="w">                   </span>93d58349-5972-4f41-b384-a4b4c6e3ce2a<span class="w">   </span>part<span class="w">  </span>crypto_LUKS
+<span class="w">  </span>└─sda1_crypt<span class="w">           </span>3e52fa81-5aa4-4f7e-9008-013c60961d9a<span class="w">   </span>crypt<span class="w"> </span>ext4
+</pre></div>
+<p>This shows we have an encrypted partition <cite>sda1</cite> (UUID <cite>93d58349...</cite>), and
+and it's mapped to <cite>sda1_crypt</cite> (UUID <cite>3e52fa81...</cite>).</p>
+</div>
+</div>
+<div class="section" id="copy-existing-files">
+<h3>Copy existing files</h3>
+<p>Our encrypted partition setup is ready to use. We can now mount this
+partition to move any existing files in <cite>/home</cite> there if any. If there is
+no need to copy the files, we may skip this section.</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>mkdir<span class="w"> </span>/mnt/encrypted_disk
+$<span class="w"> </span>sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>ext4<span class="w"> </span>/dev/mapper/sda1_crypt<span class="w"> </span>/mnt/encrypted_disk
+</pre></div>
+<p>I'm using <cite>cp -a</cite> to copy the files since it's a local copy and <cite>cp</cite> is simply
+available. Any other tool may be used.</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>cp<span class="w"> </span>-axT<span class="w"> </span>/home/<span class="w"> </span>/mnt/encrypted_disk/
+</pre></div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Make sure all the files are copied, specially hidden dot files.
+You may also want to remove existing files from /home
+since they are not stored encrypted.</p>
+</div>
+<p>When we're done copying files, we can unmount the partition and remove the
+temporary mount point.</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>umount<span class="w"> </span>/mnt/encrypted_disk
+$<span class="w"> </span>sudo<span class="w"> </span>rmdir<span class="w"> </span>/mnt/encrypted_disk
+</pre></div>
+</div>
+<div class="section" id="unlock-and-mount-on-boot">
+<h3>Unlock and mount on boot</h3>
+<p>To configure the system to unlock the device during boot, we can use <cite>/etc/cryptab</cite>.
+This file is like <cite>fstab</cite> but is read before <cite>fstab</cite> to unlock encrypted devices
+before they are mounted.</p>
+<p>Add the encrypted partition device (<cite>sda1</cite>) UUID, and the mapped device name to <cite>/etc/crypttab</cite>.</p>
+<pre class="literal-block">
+# &lt;target name&gt; &lt;source device&gt;         &lt;key file&gt;      &lt;options&gt;
+# decrypt sda1 so it can be accessed from /dev/mapper/sda1_crypt
+sda1_crypt UUID=93d58349-5972-4f41-b384-a4b4c6e3ce2a none luks,timeout=180
+</pre>
+<p>The commented line should be descriptive enough.
+The <cite>timeout</cite> option causes the passphrase prompt to timeout after the specified number of seconds.</p>
+<p>Add the unlocked LUKS device (<cite>sda1_crypt</cite>) UUID, and the mount point to <cite>/etc/fstab</cite>.</p>
+<pre class="literal-block">
+UUID=3e52fa81-5aa4-4f7e-9008-013c60961d9a /home           ext4    defaults               0       0
+</pre>
+</div>
+</div>
+
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

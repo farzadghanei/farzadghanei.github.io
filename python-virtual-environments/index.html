@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Python Virtual Environments - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="/python-virtual-environments/">
+
+        <meta name="author" content="Farzad Ghanei" />
+        <meta name="keywords" content="python" />
+        <meta name="description" content="Problem: Different applications might require different versions of the same libraries, which version of those libraries should be installed? Problem: There are tools installed with the operation system written in Python, they require specific versions of some libraries, and the ones provided by the operating system packages are to satisfy …" />
+
+        <meta property="og:site_name" content="Farzad Ghanei" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Python Virtual Environments"/>
+        <meta property="og:url" content="/python-virtual-environments/"/>
+        <meta property="og:description" content="Problem: Different applications might require different versions of the same libraries, which version of those libraries should be installed? Problem: There are tools installed with the operation system written in Python, they require specific versions of some libraries, and the ones provided by the operating system packages are to satisfy …"/>
+        <meta property="article:published_time" content="2015-10-05" />
+            <meta property="article:section" content="misc" />
+            <meta property="article:tag" content="python" />
+            <meta property="article:author" content="Farzad Ghanei" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="/python-virtual-environments/"
+                       rel="bookmark"
+                       title="Permalink to Python Virtual Environments">
+                        Python Virtual Environments
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2015-10-05T21:46:49+00:00"> Mon 05 October 2015</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/python.html">python</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <p>Problem: Different applications might require different versions of the same libraries, which version of those libraries should be installed?</p>
+<p>Problem: There are tools installed with the operation system written in Python, they require specific versions of some libraries, and the ones provided by
+the operating system packages are to satisfy those requirements. How about my application
+specific requirements that uses different versions of those libraries?</p>
+<p>Question: When a library is required, should the one provided by the operation system package management be installed, or the one available on PyPI?</p>
+<p>Answer: Use virtual environments and install the exact version that the app requires from PyPI.</p>
+<p>Each app could use its own virtual environment where only the desired versions of all required libraries are available.
+Setting up a virtual environment means using a project specific path (other than the system shared path) to install libraries, and
+when Python runs, modify <cite>sys.path</cite> to include this path to search for modules to import.</p>
+<p>And using the <a class="reference external" href="https://pypi.python.org/pypi/virtualenv">right tool</a> it's even easier in practice than mentioned here.</p>
+<div class="section" id="virtualenv">
+<h2>Virtualenv</h2>
+<p>Install <cite>virtualenv</cite> and make a path and create a virtual environment in there.
+Then using shell helper files (provided by <cite>virtualenv</cite>), the shell path is modified so when Python is called,
+it's the one configured to search the virtual environment specific path for modules.</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>virtualenv
+$<span class="w"> </span>mkdir<span class="w"> </span>~/.virtualenv/myapp
+$<span class="w"> </span>virtualenv<span class="w"> </span>~/.virtualenv/myapp
+$<span class="w"> </span>ls<span class="w"> </span>-l<span class="w"> </span>~/.virtualenv/myapp/bin/
+</pre></div>
+<p>There will be files named <strong>activate</strong> for different shells (Bash, Csh, Fish). Bash is very common so:</p>
+<div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>~/.virtualenv/myapp/bin/activate
+</pre></div>
+<p>For example I use <a class="reference external" href="http://fishshell.com/">fish</a>, so:</p>
+<div class="highlight"><pre><span></span>~&gt;<span class="w"> </span><span class="nb">source</span><span class="w"> </span>~/.virtualenv/myapp/bin/activate.fish
+</pre></div>
+<p>Now check <cite>sys.path</cite>:</p>
+<div class="highlight"><pre><span></span>~&gt;<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import sys; print sys.path&#39;</span>
+</pre></div>
+<p>These samples used the default Python available (the Python version that executes when you type <cite>python</cite> in shell).
+However it's possible to chose a specific version of Python for the virtual environment (This version of Python should already be installed)
+For example for the same app, I'd like to setup a Python 3.4 virtual environment:</p>
+<div class="highlight"><pre><span></span>~&gt;<span class="w"> </span>mkdir<span class="w"> </span>~/.virtualenv/myapp-py3.4
+~&gt;<span class="w"> </span>virtualenv<span class="w"> </span>--python<span class="o">=</span>python3.4<span class="w"> </span>~/.virtualenv/myapp-py3.4
+~&gt;<span class="w"> </span><span class="nb">source</span><span class="w"> </span>~/.virtualenv/myapp-py3.4/bin/activate.fish
+~&gt;<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import sys; print(sys.path)&#39;</span>
+</pre></div>
+<p>By default <cite>virtualenv</cite> sets up <cite>pip</cite> as well, so when calling <cite>pip</cite>, it's the one from the virtual environment, and it will install all the packages
+in the virtual environment path.</p>
+<div class="highlight"><pre><span></span>~&gt;<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="c1"># installs all packages under ~/.virtualenv/myapp-py3.4</span>
+</pre></div>
+</div>
+<div class="section" id="venv">
+<h2>Venv</h2>
+<p>Virtual environments are so useful that starting from Python 3.3 standard library provides
+a <a class="reference external" href="https://docs.python.org/3.3/library/venv.html">tool</a> to work with them.</p>
+<p>Using <cite>venv</cite> is about the same as <cite>virtualenv</cite>, only instead of using <cite>virtualenv</cite> standalone command, the <cite>venv</cite> module should be used as a script:</p>
+<div class="highlight"><pre><span></span>~&gt;<span class="w"> </span>python3.4<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>~/.venv/myapp-py3.4
+~&gt;<span class="w"> </span><span class="nb">source</span><span class="w"> </span>~/.venv/myapp-py3.4/bin/activate.fish
+~&gt;<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import sys; print(sys.path)&#39;</span>
+</pre></div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Python uses the <cite>ensurepip</cite> module to provide pip for the virtual environments
+created by <cite>venv</cite>.
+Unfortunately Python 3.4 distributed with Ubuntu Trusty Tahr
+<a class="reference external" href="https://bugs.launchpad.net/ubuntu/+source/python3.4/+bug/1290847">does not include this module</a>.
+So creating an environment without pip works fine, but pip seems to be quite useful most of times.
+Installing <cite>python3.4-venv</cite> resolves this issue.</p>
+</div>
+<p>Virtual environments can be used to deploy projects on production as well so multiple projects can be deployed on the same system,
+using their own versions of libraries.</p>
+</div>
+
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

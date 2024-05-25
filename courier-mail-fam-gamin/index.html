@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Courier IMAP error: filesystem notification initialization - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="/courier-mail-fam-gamin/">
+
+        <meta name="author" content="Farzad Ghanei" />
+        <meta name="keywords" content="linux,mail" />
+        <meta name="description" content="After configuring a Courier mail server on a Debain squeeze server, I got this error on my mail client: Filesystem notification initialization error — contact your mail administrator (check for configuration errors with the FAM/Gamin library) The problem is related to libfam0. FAM is a service for system processes that …" />
+
+        <meta property="og:site_name" content="Farzad Ghanei" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Courier IMAP error: filesystem notification initialization"/>
+        <meta property="og:url" content="/courier-mail-fam-gamin/"/>
+        <meta property="og:description" content="After configuring a Courier mail server on a Debain squeeze server, I got this error on my mail client: Filesystem notification initialization error — contact your mail administrator (check for configuration errors with the FAM/Gamin library) The problem is related to libfam0. FAM is a service for system processes that …"/>
+        <meta property="article:published_time" content="2012-06-15" />
+            <meta property="article:section" content="misc" />
+            <meta property="article:tag" content="linux" />
+            <meta property="article:tag" content="mail" />
+            <meta property="article:author" content="Farzad Ghanei" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="/courier-mail-fam-gamin/"
+                       rel="bookmark"
+                       title="Permalink to Courier IMAP error: filesystem notification initialization">
+                        Courier IMAP error: filesystem notification initialization
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2012-06-15T00:00:00+00:00"> Fri 15 June 2012</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/linux.html">linux</a>
+        /
+	<a href="/tag/mail.html">mail</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <p>After configuring a Courier mail server on a Debain squeeze server, I got this error on my mail client:</p>
+<p><tt class="docutils literal">Filesystem notification initialization error — contact your mail administrator (check for configuration errors with the FAM/Gamin library)</tt></p>
+<p>The problem is related to <a class="reference external" href="http://packages.debian.org/squeeze/libfam0">libfam0</a>. <a class="reference external" href="http://en.wikipedia.org/wiki/File_Alteration_Monitor">FAM</a> is a service for system processes
+that need to watch file system alternations. Courier uses this library to update IMAP clients on folder status updates.</p>
+<p>There are other solutions to provide file system modification alerting, including kernel specific systems like inotify or Kqueue, or portable libraries like FAM or Gamin.</p>
+<p>Gamin is newer and an active project that provides the same API as FAM so is binary and source compatible with FAM with
+some <a class="reference external" href="http://people.gnome.org/~veillard/gamin/differences.html">differences</a>.</p>
+<p>Default Courier installation on squeeze uses libfam0, provided by the <a class="reference external" href="http://packages.debian.org/squeeze/fam">fam package</a>.
+Since Gamin provides the same functionality Courier requires from libfam0, it is better to use <a class="reference external" href="https://wiki.archlinux.org/index.php/FAM">Gamin instead of FAM</a>.
+The Gamin package would remove fam package and install its own implementation of libfam0, fixing the error reported on the client side.</p>
+<p>To install Gamin, open a terminal and enter:</p>
+<div class="highlight"><pre><span></span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>gamin
+</pre></div>
+<p>This installation recommends removing fam and libfam0, accept the solution. Then restart courier-imap and courier-imap-ssl services:</p>
+<div class="highlight"><pre><span></span>sudo<span class="w"> </span>/etc/init.d/courier-imap<span class="w"> </span>restart
+sudo<span class="w"> </span>/etc/init.d/courier-imap-ssl<span class="w"> </span>restart
+</pre></div>
+
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>
