@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Statsd - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="/statsd/">
+
+        <meta name="author" content="Farzad Ghanei" />
+        <meta name="keywords" content="statsd" />
+        <meta name="description" content="This guide sets up a solution using statsd to collect detailed statistics from a system. For an introduction to the concept, please read &#34;measurement with statsd&#34;. The process is to send data from within the application to statsd server. Statsd server sends data to Graphite for storage and visualization. It …" />
+
+        <meta property="og:site_name" content="Farzad Ghanei" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Statsd"/>
+        <meta property="og:url" content="/statsd/"/>
+        <meta property="og:description" content="This guide sets up a solution using statsd to collect detailed statistics from a system. For an introduction to the concept, please read &#34;measurement with statsd&#34;. The process is to send data from within the application to statsd server. Statsd server sends data to Graphite for storage and visualization. It …"/>
+        <meta property="article:published_time" content="2013-07-25" />
+            <meta property="article:section" content="misc" />
+            <meta property="article:tag" content="statsd" />
+            <meta property="article:author" content="Farzad Ghanei" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="/statsd/"
+                       rel="bookmark"
+                       title="Permalink to Statsd">
+                        Statsd
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2013-07-25T00:00:00+00:00"> Thu 25 July 2013</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/statsd.html">statsd</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <p>This guide sets up a solution using statsd to collect detailed statistics from a system. For an introduction to the concept, please read
+&quot;<a class="reference external" href="/measurement-with-statsd/">measurement with statsd</a>&quot;.
+The process is to send data from within the application to statsd server. Statsd server sends data to Graphite for storage and visualization.</p>
+<p>It is better to keep the statsd server as close as possible to hosts sending data. This way you won't have a lot of UDP packets traveling a far distance to reduce
+the chance of packet loss.
+In case of different data centers, you could setup a statsd server in each data center, so hosts in each data center would send their statsd packets to the server
+running in the same data center.
+Then all statsd servers from different data centers flush their data to a central collector server (Carbon/Graphite).
+This transmission is over TCP and happens once every second for each statsd server.</p>
+<p>We are going to use <a class="reference external" href="https://github.com/cloudant/bucky">bucky</a>, a statsd server written in Python, However there are many servers implemented in different languages.
+At work we use Perl extensively and we were more comfortable to use a Perl based solution, so we chose
+<a class="reference external" href="https://metacpan.org/module/Net::Statsd::Server">Net::Statsd::Server</a> which is handling quite amount of traffic very well.</p>
+<div class="section" id="bucky-1">
+<h2>Bucky</h2>
+<p>Bucky could be used to collect data through different protocols, for this guide we would disable others and use only statsd.</p>
+<p>Install bucky using pip Python package manager:</p>
+<div class="highlight"><pre><span></span>sudo<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>bucky
+</pre></div>
+<p>It could be started by specifying command line options, or read its configurations from a file.
+By default if bucky could not connect to Carbon (data collection service from Graphite) it will retry for maximum of times and then quits.
+We'll make sure that bucky will keep trying every 5 seconds without a limit. Write these configs in <em>bucky.conf</em> file:</p>
+<div class="highlight"><pre><span></span><span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">full_trace</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">log_level</span> <span class="o">=</span> <span class="s2">&quot;INFO&quot;</span>
+
+<span class="n">metricsd_enabled</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">collectd_enabled</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">statsd_ip</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="n">statsd_port</span> <span class="o">=</span> <span class="mi">8125</span>
+<span class="n">statsd_enabled</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">statsd_flush_time</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+<span class="n">graphite_ip</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+<span class="n">graphite_port</span> <span class="o">=</span> <span class="mi">2003</span>
+<span class="n">graphite_max_reconnects</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">graphite_reconnect_delay</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">graphite_pickle_enabled</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">graphite_pickle_buffer_size</span> <span class="o">=</span> <span class="mi">500</span>
+</pre></div>
+<p>Now start bucky:</p>
+<div class="highlight"><pre><span></span>bucky<span class="w"> </span>bucky.conf<span class="w"> </span>&gt;<span class="w"> </span>bucky.log<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">&amp;</span>
+</pre></div>
+<p>Of course this is a quick start, you may want to start it as a system daemon on production.
+Bucky <a class="reference external" href="https://github.com/cloudant/bucky/">source</a> distribution comes with scripts for systemd and runit.
+Make sure that Carbon is running so we could store the data.</p>
+<p>Statsd packets are text over UDP, each line contains a data bucket. Each data bucket has a name, a value and a type (and a sampling factor).
+Most client libraries provide a separate method for each type, so all you need to specify is the bucket name and value.</p>
+<p>Supported types are:</p>
+<blockquote>
+<ul class="simple">
+<li>timing: measuring the time required for an operation in microseconds units. like the time it takes to execute a database transaction.</li>
+<li>counter: counting the number of any event or operation. counters could be incremented or decremented. like number of hits for a web page or number of occurrences of an error.</li>
+<li>gauge: arbitrary values, like CPU usage in percentage or memory usage in bytes.</li>
+<li>set: count the number of unique values during a sample period. like number of different IP addresses that requested a URL in the given period.</li>
+</ul>
+</blockquote>
+<p>Any programming language with a statsd client library could be used to send data.
+Here we use a sample code in Python using <a class="reference external" href="https://pypi.python.org/pypi/statsd">statsd</a> module.</p>
+<div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">statsd</span>
+
+<span class="n">sc</span> <span class="o">=</span> <span class="n">statsd</span><span class="o">.</span><span class="n">StatsClient</span><span class="p">(</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">8125</span><span class="p">)</span>
+<span class="c1"># on user login action</span>
+<span class="n">sess_time_start_mics</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s1">&#39;user.login&#39;</span><span class="p">)</span>
+
+<span class="c1"># profile any operation, like a db transaction</span>
+<span class="n">db_time_start_mics</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span>
+<span class="c1"># sleep to fake a db transaction</span>
+<span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s1">&#39;db.get_user_data&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">-</span> <span class="n">db_time_start_mics</span><span class="p">)</span>
+
+<span class="c1"># ... later on user logout action</span>
+<span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s1">&#39;user.session&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">-</span> <span class="n">sess_time_start_mics</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s1">&#39;user.logout&#39;</span><span class="p">)</span>
+</pre></div>
+<p>Data is sent from application to bucky, then flushed to Carbon and stored in whisper files.
+Check Carbon storage path to find new files and directories in <em>/opt/graphite/storage/whisper</em>.
+If you have setup <a class="reference external" href="/graphite/">Graphite</a> you could find graphs for login, logout, under &quot;user&quot; node, and &quot;user.session&quot; and &quot;db.get_user_data&quot; nodes under timers.</p>
+</div>
+
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

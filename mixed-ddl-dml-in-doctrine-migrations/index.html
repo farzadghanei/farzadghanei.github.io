@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Mixed DDL and DML SQL Commands in Doctrine Migrations - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="/mixed-ddl-dml-in-doctrine-migrations/">
+
+        <meta name="author" content="Farzad Ghanei" />
+        <meta name="keywords" content="php,doctrine" />
+        <meta name="description" content="Doctrine is a useful library when working on a heavy DB dependent application in PHP/HackLang. It provides migrations as a tool to ease the process of applying changes to the database. Each migration version is a class (often extends an abstract migration class provided by Doctrine), which specifies the …" />
+
+        <meta property="og:site_name" content="Farzad Ghanei" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Mixed DDL and DML SQL Commands in Doctrine Migrations"/>
+        <meta property="og:url" content="/mixed-ddl-dml-in-doctrine-migrations/"/>
+        <meta property="og:description" content="Doctrine is a useful library when working on a heavy DB dependent application in PHP/HackLang. It provides migrations as a tool to ease the process of applying changes to the database. Each migration version is a class (often extends an abstract migration class provided by Doctrine), which specifies the …"/>
+        <meta property="article:published_time" content="2015-10-15" />
+            <meta property="article:section" content="misc" />
+            <meta property="article:tag" content="php" />
+            <meta property="article:tag" content="doctrine" />
+            <meta property="article:author" content="Farzad Ghanei" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="/mixed-ddl-dml-in-doctrine-migrations/"
+                       rel="bookmark"
+                       title="Permalink to Mixed DDL and DML SQL Commands in Doctrine Migrations">
+                        Mixed DDL and DML SQL Commands in Doctrine Migrations
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2015-10-15T11:25:49+00:00"> Thu 15 October 2015</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/php.html">php</a>
+        /
+	<a href="/tag/doctrine.html">doctrine</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <p>Doctrine is a useful library when working on a heavy DB dependent application
+in PHP/HackLang. It provides migrations as a tool to ease the process of applying
+changes to the database.</p>
+<p>Each migration version is a class (often extends an abstract migration
+class provided by Doctrine), which specifies the steps required to migrate
+the DB from previous version to this one (<tt class="docutils literal">up</tt> method),
+and what should be done to revert the changes (<tt class="docutils literal">down</tt> method).
+Hook methods <tt class="docutils literal">preUp</tt>/<tt class="docutils literal">preDown</tt> and <tt class="docutils literal">postUp/postDown</tt> can be defined
+in the version class and are called before and after the respected methods.</p>
+<p>The name of the class (and so the name of the file) should start with <em>Version</em>,
+and the rest would be the version. If doctrine command line tool is used to
+generate the migration file, it would be named in YYYYMMDDHHmmSS format,
+but there are no requirements and it can be named anything.
+So a human readable description of the version can be used for the name as well,
+or a mix of both.</p>
+<div class="highlight"><pre><span></span><span class="cp">&lt;?php</span> <span class="c1">// file: Version20151015114023_CreateGatewayTable.php</span>
+
+<span class="k">namespace</span> <span class="nx">DoctrineMigrations</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Migrations\AbstractMigration</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Schema\Schema</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Types\Type</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">Version20151015114023_CreateGatewayTable</span> <span class="k">extends</span> <span class="nx">AbstractMigration</span>
+<span class="p">{</span>
+    <span class="k">const</span> <span class="no">TABLE_NAME</span> <span class="o">=</span> <span class="s1">&#39;gateway&#39;</span><span class="p">;</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">up</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$table</span> <span class="o">=</span> <span class="nv">$schema</span><span class="o">-&gt;</span><span class="na">createTable</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">TABLE_NAME</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addOption</span><span class="p">(</span><span class="s2">&quot;charset&quot;</span><span class="p">,</span> <span class="s2">&quot;utf8&quot;</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addOption</span><span class="p">(</span><span class="s2">&quot;collate&quot;</span><span class="p">,</span> <span class="s2">&quot;utf8_bin&quot;</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span>
+            <span class="s1">&#39;id&#39;</span><span class="p">,</span>
+            <span class="nx">Type</span><span class="o">::</span><span class="na">INTEGER</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;unsigned&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span><span class="p">,</span>
+                <span class="s1">&#39;notnull&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span><span class="p">,</span>
+                <span class="s1">&#39;autoincrement&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span>
+            <span class="p">]</span>
+        <span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">setPrimaryKey</span><span class="p">([</span><span class="s1">&#39;id&#39;</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">64</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;region&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">2</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addUniqueIndex</span><span class="p">([</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">]);</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">down</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$schema</span><span class="o">-&gt;</span><span class="na">dropTable</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">TABLE_NAME</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>The migration tool passes an instance of <tt class="docutils literal">Doctrine\DBAL\Schema\Schema</tt> to both
+<tt class="docutils literal">up</tt> and <tt class="docutils literal">down</tt> methods of the version class, so these methods can modify
+the schema as required.</p>
+<p>The migration tool calls the <tt class="docutils literal">up</tt>/<tt class="docutils literal">down</tt> methods and compares the (possibly updated)
+schema with the schema before running the migration, creates a list of SQL commands to migrate from the
+older schema to the new one, and then runs those SQL commands.</p>
+<p>The <tt class="docutils literal">AbstractMigration</tt> class provides <tt class="docutils literal">addSql</tt> method which accepts raw SQL.
+However these SQL commands are not executed right away when <tt class="docutils literal">addSql</tt> is called,
+but stored in a queue (an array) to be executed later.
+This method is specially useful when there is no (easy) way to modify the database
+using the schema instance, or a database specific command is required,
+or the migration requires to modify the data and not just the schema itself.</p>
+<p>What if the migration requires to change the schema, and migrate the data afterwards?
+Although it seems that <em>post</em> action hook methods could be where we would migrate the data,
+current version of Doctrine migrations (1.1), does not run SQL commands registered
+in post migration methods automatically.
+This means that calling <tt class="docutils literal">addSql</tt> in <em>post</em> hooks would have no effect.</p>
+<p>There is a catch in using <tt class="docutils literal">up</tt> and <tt class="docutils literal">down</tt> methods themselves to migrate the data.
+The migration tool creates the list of SQL commands required to migrate the schema,
+and appends them to the SQL commands queue, after the <tt class="docutils literal">up</tt> and <tt class="docutils literal">down</tt>
+methods are called.</p>
+<p>This means that all the calls to <tt class="docutils literal">addSql</tt> will be in the SQL commands queue
+before the ones that change the schema. So those SQL commands can not rely on the
+new schema, since they will execute while the database is still in previous version.</p>
+<p>One solution is not using the <tt class="docutils literal">Schema</tt> instance at all
+and just use <tt class="docutils literal">addSql</tt> first to change the schema, and then to migrate the data.</p>
+<p>Another solution is to use the <tt class="docutils literal">connection</tt> property of the <tt class="docutils literal">Version</tt> class in
+<tt class="docutils literal">postUp</tt>/<tt class="docutils literal">postDown</tt> methods.
+Each migration version class is provided by an instance of <tt class="docutils literal">Doctrine\DBAL\Connection</tt>
+which can be used to execute any query directly.</p>
+<div class="highlight"><pre><span></span><span class="cp">&lt;?php</span> <span class="c1">// file: Version20151015114023_CreateGatewayTable.php</span>
+
+<span class="k">namespace</span> <span class="nx">DoctrineMigrations</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Migrations\AbstractMigration</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Schema\Schema</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Doctrine\DBAL\Types\Type</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">Version20151015114023_CreateGatewayTable</span> <span class="k">extends</span> <span class="nx">AbstractMigration</span>
+<span class="p">{</span>
+    <span class="k">const</span> <span class="no">TABLE_NAME</span> <span class="o">=</span> <span class="s1">&#39;gateway&#39;</span><span class="p">;</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">up</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$table</span> <span class="o">=</span> <span class="nv">$schema</span><span class="o">-&gt;</span><span class="na">createTable</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">TABLE_NAME</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addOption</span><span class="p">(</span><span class="s2">&quot;charset&quot;</span><span class="p">,</span> <span class="s2">&quot;utf8&quot;</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addOption</span><span class="p">(</span><span class="s2">&quot;collate&quot;</span><span class="p">,</span> <span class="s2">&quot;utf8_bin&quot;</span><span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span>
+            <span class="s1">&#39;id&#39;</span><span class="p">,</span>
+            <span class="nx">Type</span><span class="o">::</span><span class="na">INTEGER</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;unsigned&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span><span class="p">,</span>
+                <span class="s1">&#39;notnull&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span><span class="p">,</span>
+                <span class="s1">&#39;autoincrement&#39;</span> <span class="o">=&gt;</span> <span class="k">true</span>
+            <span class="p">]</span>
+        <span class="p">);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">setPrimaryKey</span><span class="p">([</span><span class="s1">&#39;id&#39;</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">64</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addColumn</span><span class="p">(</span><span class="s1">&#39;region&#39;</span><span class="p">,</span> <span class="nx">Type</span><span class="o">::</span><span class="na">STRING</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;length&#39;</span> <span class="o">=&gt;</span> <span class="mi">2</span><span class="p">]);</span>
+        <span class="nv">$table</span><span class="o">-&gt;</span><span class="na">addUniqueIndex</span><span class="p">([</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span><span class="p">]);</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">down</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$schema</span><span class="o">-&gt;</span><span class="na">dropTable</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">TABLE_NAME</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">postUp</span><span class="p">(</span><span class="nx">Schema</span> <span class="nv">$schema</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">connection</span><span class="o">-&gt;</span><span class="na">insert</span><span class="p">(</span>
+            <span class="nx">self</span><span class="o">::</span><span class="na">TABLE_NAME</span><span class="p">,</span>
+            <span class="p">[</span><span class="s1">&#39;name&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;first&#39;</span><span class="p">,</span> <span class="s1">&#39;region&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;MY&#39;</span><span class="p">]</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

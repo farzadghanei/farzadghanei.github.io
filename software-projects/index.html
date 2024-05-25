@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Software Projects - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="/software-projects/">
+
+        <meta name="author" content="Farzad Ghanei" />
+        <meta name="description" content="Open Source I have developed and maintain a few personal projects, including: chkok: a monitoring tool for checking attributes of files and sockets mute: run other programs while muting the output under configured conditions navdoon: simple yet powerful statsd server miniauth: small, extensible local user authentication command line tool statsd-metrics …" />
+
+    <meta property="og:site_name" content="Farzad Ghanei" />
+    <meta property="og:type" content="article"/>
+    <meta property="og:title" content="Software Projects"/>
+    <meta property="og:url" content="/software-projects/"/>
+    <meta property="og:description" content="Open Source I have developed and maintain a few personal projects, including: chkok: a monitoring tool for checking attributes of files and sockets mute: run other programs while muting the output under configured conditions navdoon: simple yet powerful statsd server miniauth: small, extensible local user authentication command line tool statsd-metrics …" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li class="active"><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+    <section id="content" class="body">
+        <h1 class="entry-title">Software Projects</h1>
+        
+        <div class="entry-content">
+            <div class="section" id="open-source">
+<h2>Open Source</h2>
+<p>I have developed and maintain a few personal projects, including:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/farzadghanei/chkok">chkok</a>: a monitoring tool for checking attributes of files and sockets</li>
+<li><a class="reference external" href="https://github.com/farzadghanei/mute">mute</a>: run other programs while muting the output under configured conditions</li>
+<li><a class="reference external" href="https://github.com/farzadghanei/navdoon">navdoon</a>: simple yet powerful statsd server</li>
+<li><a class="reference external" href="https://github.com/farzadghanei/miniauth">miniauth</a>: small, extensible local user authentication command line tool</li>
+<li><a class="reference external" href="https://github.com/farzadghanei/statsd-metrics">statsd-metrics</a>: statsd metrics Python data models and statsd client library</li>
+<li><a class="reference external" href="https://github.com/farzadghanei/fishion">fishion</a>: sessions for fish shell</li>
+</ul>
+<p>I am a contributor/have contributed to a few projects, including:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/ByteInternet/elasticmetrics">elasticmetrics</a>: ElasticSearch metrics collector Python library and command line tool</li>
+<li><a class="reference external" href="https://github.com/ByteInternet/searchguard-python">searchguard-python</a>: Python client library for the <a class="reference external" href="https://search-guard.com/">Search Guard</a> REST API</li>
+<li><a class="reference external" href="https://github.com/slashmili/python-jalali/">python-jalali</a>: <a class="reference external" href="https://en.wikipedia.org/wiki/Jalali_calendar">Jalali</a> calendar Python library</li>
+<li><a class="reference external" href="https://testinfra.readthedocs.io/en/latest/">testinfra</a>: infrastructure testing framework</li>
+</ul>
+</div>
+<div class="section" id="package-verification">
+<h2>Package Verification</h2>
+<p>I use <a class="reference external" href="/about-me/">my PGP key</a> to sign checksums of software packages.</p>
+<p>To verify a downloaded software package, you can:</p>
+<ol class="arabic simple">
+<li>download the packages, the checksum file and the detached signature of the checksum file, to the same directory</li>
+<li>verify if the checksum file is signed by my key</li>
+</ol>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>gpg<span class="w"> </span>--verify<span class="w"> </span>DETACHED_SIGNED_FILE<span class="w"> </span>CHECKSUM_FILE
+
+<span class="c1"># or if the signature is not detached</span>
+<span class="c1"># gpg --verify CHECKSUM_FILE</span>
+
+<span class="c1"># confirm the checksum file is signed by my key</span>
+</pre></div>
+<ol class="arabic simple" start="3">
+<li>check if the checksum of downloaded files matches the expected value in the checksum file</li>
+</ol>
+<div class="highlight"><pre><span></span>$<span class="w"> </span>sha256<span class="w"> </span>--check<span class="w"> </span>CHECKSUM_FILE
+</pre></div>
+</div>
+
+        </div>
+    </section>
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Skipping Tests - Farzad Ghanei</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="/skipping-tests/">
+
+        <meta name="author" content="Farzad Ghanei" />
+        <meta name="keywords" content="php,python,tests" />
+        <meta name="description" content="Sometimes a test should be skipped for a good reason (some resource is not available for a while and mocking is not an option, or tests are assumed to be impacting each other, etc.). Most test runners support a way to mark a test to be skipped in a proper …" />
+
+        <meta property="og:site_name" content="Farzad Ghanei" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Skipping Tests"/>
+        <meta property="og:url" content="/skipping-tests/"/>
+        <meta property="og:description" content="Sometimes a test should be skipped for a good reason (some resource is not available for a while and mocking is not an option, or tests are assumed to be impacting each other, etc.). Most test runners support a way to mark a test to be skipped in a proper …"/>
+        <meta property="article:published_time" content="2016-10-01" />
+            <meta property="article:section" content="misc" />
+            <meta property="article:tag" content="php" />
+            <meta property="article:tag" content="python" />
+            <meta property="article:tag" content="tests" />
+            <meta property="article:author" content="Farzad Ghanei" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="/theme/css/bootstrap.min.css" type="text/css"/>
+    <link href="/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="/theme/css/pygments/tango.css" rel="stylesheet">
+    <link rel="stylesheet" href="/theme/css/style.css" type="text/css"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+Farzad Ghanei            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="/about-me/">
+                             About Me
+                          </a></li>
+                         <li><a href="/software-projects/">
+                             Software Projects
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="/skipping-tests/"
+                       rel="bookmark"
+                       title="Permalink to Skipping Tests">
+                        Skipping Tests
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2016-10-01T10:15:49+00:00"> Sat 01 October 2016</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="/tag/php.html">php</a>
+        /
+	<a href="/tag/python.html">python</a>
+        /
+	<a href="/tag/tests.html">tests</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <p>Sometimes a test should be skipped for a good reason (some resource is not available
+for a while and mocking is not an option, or tests are assumed to be
+impacting each other, etc.).</p>
+<p>Most test runners support a way to mark a test to be skipped in a proper way,
+so that later it won't be forgotten, being skipped unnoticed.</p>
+<p>To demonstrate a concrete example, as part of our tests we'd like to call
+an API, that creates a state that we'd like to assert, and for some
+reasons we need to skip the test.
+The <cite>ApiClient.lights_on()</cite> turns on the lights in the room.
+But currently our test setup can assert if the lights are on/off
+only on Linux platforms.
+The <cite>ApiClient.rm_files()</cite> removes some files from a network mounted drive. But
+there is a bug in the API that is causing our lunches to magically disappear.
+Also we should not call any of the methods from this API, when the load on
+the server is high.</p>
+<div class="section" id="python-unittest">
+<h2>Python unittest</h2>
+<p>Python's standard library <a class="reference external" href="http://docs.python.org/library/unittest.html">unittest</a> module
+provides the <cite>skip()</cite> function decorator to decorate the test methods, or the whole
+test class to be skipped.</p>
+<p>Conditional skips are also supported by <cite>skipIf()</cite> and <cite>skipUnless()</cite> decorators.</p>
+<p>The <cite>TestCase</cite> class provides the <cite>skipTest()</cite> method as well to skip tests.
+It can be called in the test method itself or during the <cite>setUp</cite>.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">TestCase</span><span class="p">,</span> <span class="n">skip</span><span class="p">,</span> <span class="n">skipUnless</span>
+<span class="kn">from</span> <span class="nn">platform</span> <span class="kn">import</span> <span class="n">system</span>
+<span class="kn">from</span> <span class="nn">app.module.apiclient</span> <span class="kn">import</span> <span class="n">ApiClient</span>
+
+
+<span class="k">class</span> <span class="nc">ApiClientTest</span><span class="p">(</span><span class="n">TestCase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_is_high</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">skipTest</span><span class="p">(</span><span class="s2">&quot;can&#39;t call api because load is high&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_network_files</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lights_off</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_network_files_if_exist</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lights_off</span><span class="p">()</span> <span class="c1"># save the planet</span>
+
+    <span class="nd">@skip</span><span class="p">(</span><span class="s2">&quot;can&#39;t call api because of a bug in there causing our lunch to disappear&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">test_removes_network_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ApiClient</span><span class="p">()</span><span class="o">.</span><span class="n">rm_files</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_network_files_removed</span><span class="p">()</span>
+
+    <span class="nd">@skipUnless</span><span class="p">(</span><span class="n">system</span><span class="p">()</span> <span class="ow">is</span> <span class="s2">&quot;Linux&quot;</span><span class="p">,</span> <span class="s2">&quot;we can&#39;t assert lights are on yet&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">test_turns_on_lights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ApiClient</span><span class="p">()</span><span class="o">.</span><span class="n">lights_on</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_lights_are_on</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="section" id="phpunit">
+<h2>PHPUnit</h2>
+<p>For PHP/HackLang projects a common test framework and test runner is
+<a class="reference external" href="https://phpunit.de">PHPUnit</a>.</p>
+<p>The method <a class="reference external" href="https://phpunit.de/manual/current/en/incomplete-and-skipped-tests.html#incomplete-and-skipped-tests.skipping-tests">marktTestSkipped</a>
+of the <cite>PHPUnit_Framework_TestCase</cite> class can be used to skip the test.</p>
+<p>PHPUnit provides the <cite>&#64;requires</cite> annotation to skip a test if it requires a specific
+platform (OS, PHP version, extension) which is not available.</p>
+<div class="highlight"><pre><span></span><span class="cp">&lt;?php</span>
+<span class="k">namespace</span> <span class="nx">Tests\App\Module</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">App\Module\ApiClient</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">ApiClientTest</span> <span class="k">extends</span> <span class="nx">\PHPUnit_Framework_TestCase</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">setUp</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">loadIsHigh</span><span class="p">())</span> <span class="p">{</span>
+            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">markTestSkipped</span><span class="p">(</span>
+                <span class="s2">&quot;can&#39;t call api because load is high&quot;</span>
+            <span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">createNetworkFiles</span><span class="p">();</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">lightsOff</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">tearDown</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">removeNetworkFilesIfExist</span><span class="p">();</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">lightsOff</span><span class="p">();</span> <span class="c1">// save the planet</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">testRemovesNetworkFiles</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">markTestSkipped</span><span class="p">(</span>
+            <span class="s2">&quot;can&#39;t call api because of a bug in there causing our lunch to disappear&quot;</span>
+        <span class="p">);</span>
+        <span class="p">(</span><span class="k">new</span> <span class="nx">ApiClient</span><span class="p">())</span><span class="o">-&gt;</span><span class="na">rmFiles</span><span class="p">();</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">assertNetworkFilesRemoved</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**</span>
+<span class="sd">     * @requires OS Linux</span>
+<span class="sd">     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">testTurnsOnLights</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="p">(</span><span class="k">new</span> <span class="nx">ApiClient</span><span class="p">())</span><span class="o">-&gt;</span><span class="na">lightsOn</span><span class="p">();</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">assertLightsAreOn</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>Another way to skip tests using PHPUnit annotations, is to define a group to be
+excluded from tests to run, then annotate the tests to skip with that group
+using <cite>&#64;group</cite> annotation.</p>
+<p>This example adds a group to be excluded from tests in PHPUnit configuration file
+(<cite>phpunit.xml</cite>).</p>
+<div class="highlight"><pre><span></span><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; ?&gt;</span>
+<span class="nt">&lt;phpunit</span><span class="w"> </span><span class="na">color=</span><span class="s">&quot;true&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;groups&gt;</span>
+<span class="w">        </span><span class="nt">&lt;exclude&gt;</span>
+<span class="w">            </span><span class="nt">&lt;group&gt;</span>skip<span class="nt">&lt;/group&gt;</span>
+<span class="w">        </span><span class="nt">&lt;/exclude&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/groups&gt;</span>
+<span class="nt">&lt;/phpunit&gt;</span>
+</pre></div>
+<p>Now tests annoated by <cite>&#64;group skip</cite> are skipped.</p>
+<div class="highlight"><pre><span></span><span class="cp">&lt;?php</span>
+<span class="k">namespace</span> <span class="nx">Tests\App\Module</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">ApiClientTest</span> <span class="k">extends</span> <span class="nx">\PHPUnit_Framework_TestCase</span>
+<span class="p">{</span>
+    <span class="sd">/**</span>
+<span class="sd">     * @group skip</span>
+<span class="sd">     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">testRemovesNetworkFiles</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="c1">// ...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>The whole test case can be skipped in this way.</p>
+<div class="highlight"><pre><span></span><span class="cp">&lt;?php</span>
+<span class="k">namespace</span> <span class="nx">Tests\App\Module</span><span class="p">;</span>
+
+<span class="sd">/**</span>
+<span class="sd"> * @group skip</span>
+<span class="sd"> */</span>
+<span class="k">class</span> <span class="nc">ApiClientTest</span> <span class="k">extends</span> <span class="nx">\PHPUnit_Framework_TestCase</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">testRemovesNetworkFiles</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="c1">// ...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/farzadghanei"><i class="fa fa-linkedin-square fa-lg"></i> LinkedIn</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/farzadghanei"><i class="fa fa-twitter-square fa-lg"></i> Twitter</a></li>
+    <li class="list-group-item"><a href="https://github.com/farzadghanei"><i class="fa fa-github-square fa-lg"></i> Github</a></li>
+    <li class="list-group-item"><a href="https://stackoverflow.com/users/9394/farzad"><i class="fa fa-stack-overflow fa-lg"></i> Stack Overflow</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2023 Farzad Ghanei
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>
